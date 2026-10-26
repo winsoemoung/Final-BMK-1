@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "Cargo": {
+      "title": "Cargo Shipment",
+      "description": "Cargo items shipped between Mandalay and Kalaymyo",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "trackingNumber": { "type": "string" },
+        "cargoDensityType": { "type": "string", "enum": ["HEAVY", "BULK"] },
+        "cargoName": { "type": "string" },
+        "unitWeight": { "type": "number" },
+        "weightUnit": { "type": "string" },
+        "quantity": { "type": "integer" },
+        "itemDescription": { "type": "string" },
+        "weightViss": { "type": "number" },
+        "weightKg": { "type": "number" },
+        "senderName": { "type": "string" },
+        "senderPhone": { "type": "string" },
+        "senderAddress": { "type": "string" },
+        "isShuttlePickup": { "type": "boolean" },
+        "shuttleFee": { "type": "number" },
+        "shuttleLaborFee": { "type": "number" },
+        "receiverName": { "type": "string" },
+        "receiverPhone": { "type": "string" },
+        "receiverShopAddress": { "type": "string" },
+        "freightRatePerViss": { "type": "number" },
+        "freightFee": { "type": "number" },
+        "mdyLoadingRatePerViss": { "type": "number" },
+        "mdyLoadingLaborFee": { "type": "number" },
+        "klyUnloadingRatePerViss": { "type": "number" },
+        "klyUnloadingLaborFee": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "paymentStatus": { "type": "string" },
+        "status": { "type": "string" },
+        "truckId": { "type": "integer" },
+        "truckNumber": { "type": "string" },
+        "driverName": { "type": "string" },
+        "driverPhone": { "type": "string" },
+        "sequenceOrder": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "trackingNumber", "senderName", "receiverName"]
+    },
+    "Truck": {
+      "title": "Truck Driver",
+      "description": "12-wheeler truck fleet assignment",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "truckNumber": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "driverName": { "type": "string" },
+        "driverPhone": { "type": "string" },
+        "truckType": { "type": "string" },
+        "mandalayToKalayFreightPrice": { "type": "number" },
+        "advancePayment": { "type": "number" },
+        "dispatchDate": { "type": "string" },
+        "status": { "type": "string" },
+        "totalVissLoaded": { "type": "number" },
+        "totalCargosCount": { "type": "integer" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "truckNumber", "driverName"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/cargos/{cargoId}": {
+      "schema": "Cargo",
+      "description": "Collection of cargos owned by user"
+    },
+    "/users/{userId}/trucks/{truckId}": {
+      "schema": "Truck",
+      "description": "Collection of trucks owned by user"
+    }
+  }
+}

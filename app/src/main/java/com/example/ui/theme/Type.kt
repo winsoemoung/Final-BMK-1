@@ -2,35 +2,61 @@ package com.example.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.example.R
 
-// Set of Material typography styles to start with
-val Typography =
-  Typography(
-    bodyLarge =
-      TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp,
-      )
-    /* Other default text styles to override
-    titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
+val NotoSansMyanmarFontFamily = FontFamily(
+    Font(R.font.noto_sans_myanmar, FontWeight.Normal)
+)
+
+val OutfitFontFamily = FontFamily(
+    Font(R.font.outfit, FontWeight.Normal)
+)
+
+val Typography = Typography(
+    displayLarge = TextStyle(
+        fontFamily = NotoSansMyanmarFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 26.sp,
+        lineHeight = 34.sp,
+        color = TextPrimary
     ),
-    labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
+    titleLarge = TextStyle(
+        fontFamily = NotoSansMyanmarFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 19.sp,
+        lineHeight = 26.sp,
+        color = TextPrimary
+    ),
+    titleMedium = TextStyle(
+        fontFamily = NotoSansMyanmarFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 15.sp,
+        lineHeight = 22.sp,
+        color = TextPrimary
+    ),
+    bodyLarge = TextStyle(
+        fontFamily = NotoSansMyanmarFontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 14.sp,
+        lineHeight = 22.sp,
+        color = TextPrimary
+    ),
+    bodyMedium = TextStyle(
+        fontFamily = NotoSansMyanmarFontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 12.sp,
+        lineHeight = 18.sp,
+        color = TextSecondary
+    ),
+    labelLarge = TextStyle(
+        fontFamily = NotoSansMyanmarFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        color = TextPrimary
     )
-    */
-  )
+)

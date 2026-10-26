@@ -128,45 +128,75 @@ fun MandalayTabScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = if (settingsState.language == "my") "မန္တလေးဂိတ် (Mandalay Gate)" else "Mandalay Gate",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = Color.White
-                        )
-                        Text(
-                            text = "ဂိုထောင် ကုန်လက်ခံခြင်း နှင့် ၁၂ ဘီး ကားပေါ်တင်ခြင်း",
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.9f)
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { showAiDialog = true },
-                        modifier = Modifier.testTag("action_open_ai")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "BMK AI Smart Assistant",
-                            tint = BmkOrange
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BmkNavy)
-            )
+            Column(modifier = Modifier.background(DarkBackground)) {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "BMK EXPRESS",
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 17.sp,
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    color = BmkOrangeBright,
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        text = "၁၂ ဘီး ဂိတ်",
+                                        color = Color.Black,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "မန္တလေး (၈၄ လမ်း) ⇌ ကလေးမြို့ အမြန်ကုန်စည်",
+                                fontSize = 11.sp,
+                                color = TextMutedDark
+                            )
+                        }
+                    },
+                    actions = {
+                        // + ဘောင်ချာဖွင့် Button
+                        Button(
+                            onClick = { showIntakeForm = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = BmkOrangeBright),
+                            shape = RoundedCornerShape(16.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.testTag("top_action_open_voucher")
+                        ) {
+                            Text("+ ဘောင်ချာဖွင့်", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        // Gemini AI Button
+                        OutlinedButton(
+                            onClick = { showAiDialog = true },
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, BmkOrangeBright.copy(alpha = 0.6f)),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.testTag("action_open_ai")
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = BmkOrangeBright, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Gemini AI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+                )
+            }
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { showIntakeForm = true },
+                onClick = { showAiDialog = true },
                 containerColor = BmkOrange,
                 contentColor = Color.White,
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("ကုန်လက်ခံမည်", fontWeight = FontWeight.Bold, fontSize = 14.sp) },
-                modifier = Modifier.testTag("fab_receive_cargo")
+                icon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White) },
+                text = { Text("BMK AI လက်ထောက်", fontWeight = FontWeight.Bold, fontSize = 13.sp) },
+                modifier = Modifier.testTag("fab_ai_assistant")
             )
         }
     ) { padding ->

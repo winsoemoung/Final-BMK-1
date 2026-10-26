@@ -1,7 +1,6 @@
 package com.example.ui.theme
 
 import android.app.Activity
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -11,29 +10,28 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val HighContrastColorScheme = lightColorScheme(
+private val BmkComfortColorScheme = lightColorScheme(
     primary = BmkNavy,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFE2E8F0),
-    onPrimaryContainer = BmkNavyDark,
+    primaryContainer = BmkOrangeContainer,
+    onPrimaryContainer = BmkOrangeDark,
     secondary = BmkOrange,
     onSecondary = Color.White,
-    secondaryContainer = BmkOrangeContainer,
-    onSecondaryContainer = Color(0xFF7C2D12),
-    tertiary = Color(0xFFD97706),
+    secondaryContainer = BmkBlueBg,
+    onSecondaryContainer = BmkBlue,
+    tertiary = BmkGreen,
     onTertiary = Color.White,
     background = SurfaceLight,
     onBackground = TextPrimary,
     surface = CardBackground,
     onSurface = TextPrimary,
-    surfaceVariant = Color(0xFFF8FAFC),
+    surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = TextSecondary,
-    outline = Color(0xFFCBD5E1)
+    outline = CardBorderColor
 )
 
 @Composable
 fun BmkExpressTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val view = LocalView.current
@@ -41,12 +39,14 @@ fun BmkExpressTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = BmkNavy.toArgb()
+            window.navigationBarColor = Color.White.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = true
         }
     }
 
     MaterialTheme(
-        colorScheme = HighContrastColorScheme,
+        colorScheme = BmkComfortColorScheme,
         typography = Typography,
         content = content
     )

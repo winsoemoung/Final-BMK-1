@@ -54,7 +54,7 @@ fun HistoryTabScreen(
                         color = Color.White
                     )
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BmkNavy)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
             )
         }
     ) { padding ->

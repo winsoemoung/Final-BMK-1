@@ -94,7 +94,7 @@ fun WorkersTabScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BmkNavy)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
             )
         },
         floatingActionButton = {

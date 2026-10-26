@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -16,12 +17,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.screens.*
-import com.example.ui.theme.BmkExpressTheme
-import com.example.ui.theme.BmkNavy
-import com.example.ui.theme.BmkOrange
+import com.example.ui.theme.*
 import com.example.ui.viewmodel.BmkViewModel
 
 sealed class BmkTabScreen(
@@ -75,42 +75,48 @@ fun BmkAppMain(viewModel: BmkViewModel = viewModel()) {
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = Color.White,
-                contentColor = BmkNavy,
-                modifier = Modifier
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-                    .testTag("main_navigation_bar")
+            Surface(
+                color = CardBackground,
+                shadowElevation = 6.dp,
+                border = BorderStroke(0.5.dp, CardBorderColor)
             ) {
-                tabs.forEach { tab ->
-                    val isSelected = currentRoute == tab.route
-                    val labelText = if (settingsState.language == "my") tab.titleBurmese else tab.titleEnglish
+                NavigationBar(
+                    containerColor = CardBackground,
+                    contentColor = TextPrimary,
+                    modifier = Modifier
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .testTag("main_navigation_bar")
+                ) {
+                    tabs.forEach { tab ->
+                        val isSelected = currentRoute == tab.route
+                        val labelText = if (settingsState.language == "my") tab.titleBurmese else tab.titleEnglish
 
-                    NavigationBarItem(
-                        selected = isSelected,
-                        onClick = { currentRoute = tab.route },
-                        label = {
-                            Text(
-                                text = labelText,
-                                fontSize = 10.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = if (isSelected) tab.iconSelected else tab.iconUnselected,
-                                contentDescription = labelText
-                            )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = BmkNavy,
-                            selectedTextColor = BmkNavy,
-                            indicatorColor = BmkOrange.copy(alpha = 0.15f),
-                            unselectedIconColor = Color.Gray,
-                            unselectedTextColor = Color.Gray
-                        ),
-                        modifier = Modifier.testTag("nav_item_${tab.route}")
-                    )
+                        NavigationBarItem(
+                            selected = isSelected,
+                            onClick = { currentRoute = tab.route },
+                            label = {
+                                Text(
+                                    text = labelText,
+                                    fontSize = 10.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = if (isSelected) tab.iconSelected else tab.iconUnselected,
+                                    contentDescription = labelText
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = BmkNavy,
+                                selectedTextColor = BmkNavy,
+                                indicatorColor = BmkOrangeContainer,
+                                unselectedIconColor = TextMuted,
+                                unselectedTextColor = TextMuted
+                            ),
+                            modifier = Modifier.testTag("nav_item_${tab.route}")
+                        )
+                    }
                 }
             }
         }
