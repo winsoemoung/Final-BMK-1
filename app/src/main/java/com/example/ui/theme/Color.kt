@@ -35,3 +35,8 @@ val StatusAmberText = Color(0xFF9A3412)
 
 val StatusRedBg = Color(0xFFFEF2F2)
 val StatusRedText = Color(0xFFB91C1C)
+
+// Bright Purple for Bulk Cargo (ကုန်ပွ)
+val BulkPurpleBg = Color(0xFFF3E8FF)
+val BulkPurpleText = Color(0xFF7E22CE)
+val BulkPurpleBright = Color(0xFFA855F7)

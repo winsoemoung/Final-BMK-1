@@ -24,16 +24,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.model.CargoEntity
 import com.example.data.model.CompensationEntity
+import com.example.ui.components.AiAssistantDialog
 import com.example.ui.theme.*
+import com.example.ui.viewmodel.AiLogisticsViewModel
 import com.example.ui.viewmodel.BmkViewModel
 import java.text.NumberFormat
 import java.util.Locale
-
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ui.components.AiAssistantDialog
-import com.example.ui.viewmodel.AiLogisticsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,7 +75,7 @@ fun KalaymyoTabScreen(
                             color = Color.White
                         )
                         Text(
-                            text = if (settingsState.language == "my") "၁၂ ဘီး ကုန်ချခြင်း နှင့် ဆိုင်အရောက် ပို့ဆောင်မှု" else "Unloading & Direct Shop Delivery",
+                            text = "၁၂ ဘီး ကုန်ချခြင်း နှင့် ဆိုင်အရောက် ပို့ဆောင်မှု",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.9f)
                         )
@@ -126,17 +125,16 @@ fun KalaymyoTabScreen(
             }
 
             if (selectedSubTab == 0) {
-                // Subtab 0: Kalaymyo Receivers & Unloading
+                // Kalaymyo Receivers & Unloading
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-
                     item {
                         Text(
-                            text = "ကလေးမြို့ လက်ခံသူ ကုန်ပစ္စည်းများ - [အမည်ကို နှိပ်၍ အသေးစိတ်ကြည့်ပါ]",
-                            fontSize = 14.sp,
+                            text = "ကလေးမြို့ လက်ခံသူ / ဆိုင်များ စာရင်း (${allCargo.size} ထုပ်) - [အမည်ကို နှိပ်၍ အသေးစိတ်ကြည့်ပါ]",
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )
@@ -151,7 +149,7 @@ fun KalaymyoTabScreen(
                     }
                 }
             } else {
-                // Subtab 1: Compensation Claims
+                // Compensation Claims
                 Box(modifier = Modifier.fillMaxSize()) {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -167,7 +165,7 @@ fun KalaymyoTabScreen(
                                 Text(
                                     text = "ကုန်ပစ္စည်း ပျက်စီးမှု လျော်ကြေး စာရင်း",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
+                                    fontSize = 14.sp,
                                     color = TextPrimary
                                 )
                                 Button(
@@ -229,9 +227,9 @@ fun KalaymyoTabScreen(
                     Text("• ကုန်ပစ္စည်း: ${cargo.cargoName.ifBlank { cargo.itemDescription }} (${cargo.quantity} ${cargo.weightUnit})", fontSize = 12.sp, color = TextPrimary)
                     Text("• ကလေး ၁၂ ဘီး ကုန်ချခ: ${currencyFormat.format(cargo.klyUnloadingLaborFee)} ကျပ် (၂၅ ကျပ်/ပိဿာ)", fontSize = 12.sp, color = TextSecondary)
                     Text("• စုစုပေါင်း ကျသင့်ငွေ: ${currencyFormat.format(cargo.totalAmount)} ကျပ်", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = BmkOrange)
-                    
+
                     Divider(color = CardBorderColor)
-                    
+
                     Text("ကလေးမြို့ ဂိတ်အခြေအနေ ပြောင်းရန်:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf(
@@ -360,7 +358,7 @@ fun KalaymyoTabScreen(
                             damageDescription = damageDescription,
                             claimAmount = claim,
                             paidAmount = paid,
-                            date = "2026-10-25",
+                            date = "2026-10-26",
                             notes = notes,
                             onSuccess = {
                                 showClaimDialog = false
@@ -420,12 +418,12 @@ fun CompactKalayCargoListItem(
                     color = BmkNavy
                 )
                 Text(
-                    text = "ဆိုင်: ${cargo.receiverShopAddress}",
+                    text = "ဆိုင်/လိပ်စာ: ${cargo.receiverShopAddress}",
                     fontSize = 12.sp,
                     color = TextPrimary
                 )
                 Text(
-                    text = "ကုန်: ${cargo.cargoName.ifBlank { cargo.itemDescription }}",
+                    text = "ကုန်ပစ္စည်း: ${cargo.cargoName.ifBlank { cargo.itemDescription }}",
                     fontSize = 11.sp,
                     color = TextSecondary
                 )

@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -25,11 +26,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.model.CargoEntity
 import com.example.data.model.TruckEntity
-import com.example.ui.theme.*
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.components.AiAssistantDialog
+import com.example.ui.theme.*
 import com.example.ui.viewmodel.AiLogisticsViewModel
 import com.example.ui.viewmodel.BmkViewModel
 import java.text.NumberFormat
@@ -50,55 +51,63 @@ fun MandalayTabScreen(
     var showAiDialog by remember { mutableStateOf(false) }
     var showIntakeForm by remember { mutableStateOf(false) }
     var selectedCargoDetails by remember { mutableStateOf<CargoEntity?>(null) }
+    var selectedTruckForList by remember { mutableStateOf<TruckEntity?>(null) }
 
-    // Form fields
+    // AA vs BB View Modes: 0 = (AA) Customer/Shop List, 1 = (BB) Detailed All Cargos List
+    var viewMode by remember { mutableIntStateOf(0) }
+    val viewModes = listOf("(AA) Customer/Shop အလိုက်", "(BB) ကုန်ပစ္စည်း စာရင်းပေါင်း")
+
+    // Selection States for Truck Assignment
+    var isSelectionMode by remember { mutableStateOf(false) }
+    val selectedCargoIds = remember { mutableStateListOf<Long>() }
+    var showAssignTruckDialog by remember { mutableStateOf(false) }
+    var showAddTruckInAssignDialog by remember { mutableStateOf(false) }
+
+    // New Truck Form Fields
+    var newTruckNumber by remember { mutableStateOf("3N-776445") }
+    var newOwnerName by remember { mutableStateOf("") }
+    var newDriverName by remember { mutableStateOf("") }
+    var newDriverPhone by remember { mutableStateOf("") }
+    var newPriceStr by remember { mutableStateOf("1500000") }
+    var newAdvanceStr by remember { mutableStateOf("200000") }
+    var newDispatchDate by remember { mutableStateOf("2026-10-26") }
+
+    // Intake Form Fields
     var cargoDensityType by remember { mutableStateOf("HEAVY") } // "HEAVY" (ကုန်မာ) or "BULK" (ကုန်ပွ)
     var cargoName by remember { mutableStateOf("") }
-    
-    // 3. တစ်ခု အလေးချိန် + (ပိဿာ or Kg)
     var unitWeightStr by remember { mutableStateOf("3.2") }
-    var weightTypeUnit by remember { mutableStateOf("ပိဿာ") } // "ပိဿာ" or "Kg"
-    
-    // 4. အရေအတွက် + ယူနစ် (ဖာ, ခု, အိတ်, ပုံး, ထုပ်, etc)
+    var weightTypeUnit by remember { mutableStateOf("ပိဿာ") }
     var quantityStr by remember { mutableStateOf("50") }
     var selectedPackageUnit by remember { mutableStateOf("ဖာ") }
     val packageUnitsList = listOf("ဖာ", "ခု", "အိတ်", "ပုံး", "ထုပ်", "စီး")
     var isPackageUnitDropdownExpanded by remember { mutableStateOf(false) }
-    
-    // 5. အသေးစိတ် ဖော်ပြချက်
     var itemDescription by remember { mutableStateOf("") }
-    
-    // 6. ပို့သူ အချက်အလက် (မန္တလေးဂိတ်)
+
     var senderName by remember { mutableStateOf("") }
     var senderPhone by remember { mutableStateOf("") }
     var senderAddress by remember { mutableStateOf("") }
-    
-    // 7. ခေါက်တို သွားတိုက်ရန် အမှန်ခြစ်
+
     var isShuttlePickup by remember { mutableStateOf(false) }
     var shuttleFeeStr by remember { mutableStateOf("5000") }
     var shuttleLaborFeeStr by remember { mutableStateOf("2000") }
-    
-    // 8. Kalaymyo မှ လက်ခံသူ
+
     var receiverName by remember { mutableStateOf("") }
     var receiverPhone by remember { mutableStateOf("") }
     var receiverShopAddress by remember { mutableStateOf("") }
-    
-    // 9. Car Tab မှ Car တစ်စီး ရွေးချယ်မှု
+
     var selectedTruck by remember { mutableStateOf<TruckEntity?>(null) }
     var isTruckDropdownExpanded by remember { mutableStateOf(false) }
-    
+
     var paymentStatus by remember { mutableStateOf("PAID") }
     var remarks by remember { mutableStateOf("") }
 
     var showSuccessDialog by remember { mutableStateOf(false) }
     var issuedTrackingNo by remember { mutableStateOf("") }
 
-    // Dynamic Total Weight Calculation = [ အရေအတွက် x တစ်ခု အလေးချိန် ]
     val unitWeight = unitWeightStr.toDoubleOrNull() ?: 0.0
     val quantity = quantityStr.toIntOrNull() ?: 1
-    
     val totalWeightInEnteredUnit = unitWeight * quantity
-    
+
     val totalCalculatedViss = if (weightTypeUnit == "Kg") {
         viewModel.convertKgToViss(totalWeightInEnteredUnit)
     } else {
@@ -115,7 +124,6 @@ fun MandalayTabScreen(
     val klyUnloadingFee = totalCalculatedViss * settingsState.klyUnloadingRatePerViss
     val shuttleFee = if (isShuttlePickup) (shuttleFeeStr.toDoubleOrNull() ?: 0.0) else 0.0
     val shuttleLaborFee = if (isShuttlePickup) (shuttleLaborFeeStr.toDoubleOrNull() ?: 0.0) else 0.0
-
     val totalCalculatedAmount = freightFee + mdyLoadingFee + klyUnloadingFee + shuttleFee + shuttleLaborFee
 
     Scaffold(
@@ -130,7 +138,7 @@ fun MandalayTabScreen(
                             color = Color.White
                         )
                         Text(
-                            text = if (settingsState.language == "my") "ကုန်လက်ခံခြင်း နှင့် ခေါက်တို ပို့ဆောင်မှု" else "Cargo Intake & Shuttle Service",
+                            text = "ဂိုထောင် ကုန်လက်ခံခြင်း နှင့် ၁၂ ဘီး ကားပေါ်တင်ခြင်း",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.9f)
                         )
@@ -157,40 +165,594 @@ fun MandalayTabScreen(
                 containerColor = BmkOrange,
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text(if (settingsState.language == "my") "ကုန်လက်ခံမည်" else "Receive Cargo", fontWeight = FontWeight.Bold, fontSize = 14.sp) },
+                text = { Text("ကုန်လက်ခံမည်", fontWeight = FontWeight.Bold, fontSize = 14.sp) },
                 modifier = Modifier.testTag("fab_receive_cargo")
             )
         }
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(SurfaceLight),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .background(SurfaceLight)
         ) {
-            item {
+            // View Mode Selector Bar [ (AA) By Customer/Shop | (BB) All Cargos List ]
+            Surface(
+                color = CardBackground,
+                shadowElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    viewModes.forEachIndexed { index, modeTitle ->
+                        FilterChip(
+                            selected = viewMode == index,
+                            onClick = { viewMode = index },
+                            label = { Text(modeTitle, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = BmkNavy,
+                                selectedLabelColor = Color.White,
+                                containerColor = SurfaceLight,
+                                labelColor = TextPrimary
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            // Selection Controls Toolbar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = if (settingsState.language == "my") "မန္တလေးဂိတ် ကုန်ပစ္စည်းများ စာရင်း (${allCargo.size} ထုပ်) - [အမည်ကို နှိပ်၍ အသေးစိတ်ကြည့်ပါ]" else "Mandalay Cargos (${allCargo.size}) - [Tap name for details]",
-                    fontSize = 14.sp,
+                    text = if (viewMode == 0) "Customer / Shop အလိုက် စာရင်းများ" else "ကုန်ပစ္စည်း အပုဒ်ရေ (${allCargo.size}) စာရင်း",
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(
+                        selected = isSelectionMode,
+                        onClick = {
+                            isSelectionMode = !isSelectionMode
+                            if (!isSelectionMode) selectedCargoIds.clear()
+                        },
+                        label = { Text(if (isSelectionMode) "Select ပိတ်မည်" else "ကားပေါ်တင်ရန် Select မှတ်မည်", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = BmkOrange,
+                            selectedLabelColor = Color.White,
+                            containerColor = SurfaceLight,
+                            labelColor = TextPrimary
+                        )
+                    )
+
+                    if (isSelectionMode && selectedCargoIds.isNotEmpty()) {
+                        Button(
+                            onClick = { showAssignTruckDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = BmkOrange),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text("ကားပေါ်တင်မည် (${selectedCargoIds.size})", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
+                }
             }
 
-            // Compact List View
-            items(allCargo) { cargo ->
-                CompactMandalayCargoListItem(
-                    cargo = cargo,
-                    currencyFormat = currencyFormat,
-                    onClick = { selectedCargoDetails = cargo }
-                )
+            // Content List View
+            if (viewMode == 0) {
+                // (AA) Mode - Grouped by Customer / Shop Name
+                val groupedCargos = remember(allCargo) {
+                    allCargo.groupBy { it.senderName.ifBlank { "အမည်မသိ Customer / Shop" } }
+                }
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(groupedCargos.keys.toList()) { custName ->
+                        val customerItems = groupedCargos[custName] ?: emptyList()
+                        val allCustIds = customerItems.map { it.id }
+                        val isAllCustSelected = selectedCargoIds.containsAll(allCustIds)
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = CardBackground),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, CardBorderColor)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                        if (isSelectionMode) {
+                                            Checkbox(
+                                                checked = isAllCustSelected,
+                                                onCheckedChange = { checked ->
+                                                    if (checked) {
+                                                        allCustIds.forEach { if (!selectedCargoIds.contains(it)) selectedCargoIds.add(it) }
+                                                    } else {
+                                                        selectedCargoIds.removeAll(allCustIds)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                        Icon(Icons.Default.Storefront, contentDescription = null, tint = BmkNavy, modifier = Modifier.size(20.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Column {
+                                            Text(
+                                                text = custName,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = BmkNavy
+                                            )
+                                            val phone = customerItems.firstOrNull()?.senderPhone.orEmpty()
+                                            if (phone.isNotBlank()) {
+                                                Text("ဖုန်း: $phone", fontSize = 11.sp, color = TextSecondary)
+                                            }
+                                        }
+                                    }
+
+                                    Surface(color = BmkNavy.copy(alpha = 0.1f), shape = RoundedCornerShape(6.dp)) {
+                                        Text(
+                                            text = "${customerItems.size} ထုပ်",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = BmkNavy,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+
+                                Divider(modifier = Modifier.padding(vertical = 8.dp), color = CardBorderColor)
+
+                                // Inner list of items delivered by this customer
+                                customerItems.forEach { cargo ->
+                                    val isSelected = selectedCargoIds.contains(cargo.id)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp)
+                                            .clickable {
+                                                if (isSelectionMode) {
+                                                    if (isSelected) selectedCargoIds.remove(cargo.id) else selectedCargoIds.add(cargo.id)
+                                                } else {
+                                                    selectedCargoDetails = cargo
+                                                }
+                                            },
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (isSelectionMode) {
+                                            Checkbox(
+                                                checked = isSelected,
+                                                onCheckedChange = { checked ->
+                                                    if (checked) selectedCargoIds.add(cargo.id) else selectedCargoIds.remove(cargo.id)
+                                                }
+                                            )
+                                        }
+
+                                        // Bright Purple Badge for Bulk Cargo (ကုန်ပွ)
+                                        Surface(
+                                            color = if (cargo.cargoDensityType == "BULK") BulkPurpleBg else BmkNavy.copy(alpha = 0.12f),
+                                            shape = RoundedCornerShape(4.dp)
+                                        ) {
+                                            Text(
+                                                text = if (cargo.cargoDensityType == "BULK") "ကုန်ပွ" else "ကုန်မာ",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (cargo.cargoDensityType == "BULK") BulkPurpleText else BmkNavy,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(8.dp))
+
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = cargo.cargoName.ifBlank { cargo.itemDescription },
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = TextPrimary
+                                            )
+                                            Text(
+                                                text = "${cargo.quantity} ${cargo.weightUnit} (${cargo.weightViss} ပိဿာ)",
+                                                fontSize = 11.sp,
+                                                color = TextSecondary
+                                            )
+                                        }
+
+                                        if (cargo.truckNumber.isNotBlank()) {
+                                            Surface(
+                                                color = StatusOrangeBg,
+                                                shape = RoundedCornerShape(4.dp),
+                                                modifier = Modifier.clickable {
+                                                    val foundTruck = allTrucks.find { it.id == cargo.truckId || it.truckNumber == cargo.truckNumber }
+                                                    selectedTruckForList = foundTruck ?: TruckEntity(truckNumber = cargo.truckNumber, driverName = cargo.driverName, driverPhone = cargo.driverPhone, dispatchDate = "2026-10-26")
+                                                }
+                                            ) {
+                                                Text(
+                                                    text = cargo.truckNumber,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = StatusOrangeText,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // (BB) Mode - Detailed All Cargos List (Flat List of Thousands of Items)
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(allCargo) { cargo ->
+                        val isSelected = selectedCargoIds.contains(cargo.id)
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    if (isSelectionMode) {
+                                        if (isSelected) selectedCargoIds.remove(cargo.id) else selectedCargoIds.add(cargo.id)
+                                    } else {
+                                        selectedCargoDetails = cargo
+                                    }
+                                }
+                                .testTag("cargo_bb_${cargo.id}"),
+                            colors = CardDefaults.cardColors(containerColor = CardBackground),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, if (isSelected) BmkOrange else CardBorderColor)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                    if (isSelectionMode) {
+                                        Checkbox(
+                                            checked = isSelected,
+                                            onCheckedChange = { checked ->
+                                                if (checked) selectedCargoIds.add(cargo.id) else selectedCargoIds.remove(cargo.id)
+                                            }
+                                        )
+                                    }
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = cargo.cargoName.ifBlank { cargo.itemDescription },
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = BmkNavy
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+
+                                            // Bright Purple Badge for Bulk Cargo (ကုန်ပွ)
+                                            Surface(
+                                                color = if (cargo.cargoDensityType == "BULK") BulkPurpleBg else BmkNavy.copy(alpha = 0.12f),
+                                                shape = RoundedCornerShape(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = if (cargo.cargoDensityType == "BULK") "ကုန်ပွ" else "ကုန်မာ",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (cargo.cargoDensityType == "BULK") BulkPurpleText else BmkNavy,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "ပိုင်ရှင်: ${cargo.senderName} (${cargo.senderPhone})",
+                                            fontSize = 12.sp,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            text = "အရေအတွက်: ${cargo.quantity} ${cargo.weightUnit} (${cargo.weightViss} ပိဿာ)",
+                                            fontSize = 11.sp,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                }
+
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "${currencyFormat.format(cargo.totalAmount)} ကျပ်",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = BmkOrange
+                                    )
+                                    if (cargo.truckNumber.isNotBlank()) {
+                                        Surface(
+                                            color = StatusOrangeBg,
+                                            shape = RoundedCornerShape(4.dp),
+                                            modifier = Modifier.clickable {
+                                                val foundTruck = allTrucks.find { it.id == cargo.truckId || it.truckNumber == cargo.truckNumber }
+                                                selectedTruckForList = foundTruck ?: TruckEntity(truckNumber = cargo.truckNumber, driverName = cargo.driverName, driverPhone = cargo.driverPhone, dispatchDate = "2026-10-26")
+                                            }
+                                        ) {
+                                            Text(
+                                                text = cargo.truckNumber,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = StatusOrangeText,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
-    // Detail Modal Dialog when item is tapped
+    // Modal Dialog: Items Loaded on Selected Truck with Reordering (1..N)
+    selectedTruckForList?.let { truck ->
+        val truckCargos = remember(allCargo, truck) {
+            allCargo.filter { it.truckId == truck.id || it.truckNumber == truck.truckNumber }.sortedBy { it.sequenceOrder }
+        }
+
+        AlertDialog(
+            onDismissRequest = { selectedTruckForList = null },
+            containerColor = Color.White,
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "ကားပေါ်ရောက် ကုန်ပစ္စည်းများ (${truck.truckNumber})",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = BmkNavy
+                    )
+                    Surface(color = StatusOrangeBg, shape = RoundedCornerShape(6.dp)) {
+                        Text(
+                            text = "${truckCargos.size} ထုပ်",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = StatusOrangeText,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("• ယာဉ်မောင်း/ကားသမား: ${truck.driverName} (${truck.driverPhone})", fontSize = 12.sp, color = TextPrimary, fontWeight = FontWeight.Bold)
+                    Text("• အစဉ်လိုက် ရွှေ့ပြောင်းရန် ↑↓ မြှားများကို နှိပ်ပါ:", fontSize = 11.sp, color = TextSecondary)
+
+                    Divider(color = CardBorderColor)
+
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 320.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        itemsIndexed(truckCargos) { index, item ->
+                            Surface(
+                                color = SurfaceLight,
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, CardBorderColor)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Surface(color = BmkNavy, shape = RoundedCornerShape(4.dp)) {
+                                        Text(
+                                            text = "#${index + 1}",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = item.cargoName.ifBlank { item.itemDescription },
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            text = "ပိုင်ရှင်: ${item.senderName} (${item.quantity} ${item.weightUnit})",
+                                            fontSize = 10.sp,
+                                            color = TextSecondary
+                                        )
+                                    }
+
+                                    // Up / Down Reorder Arrows
+                                    Row {
+                                        IconButton(
+                                            onClick = {
+                                                if (index > 0) {
+                                                    viewModel.swapCargoSequenceOnTruck(truckCargos, index, index - 1)
+                                                }
+                                            },
+                                            enabled = index > 0,
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(Icons.Default.ArrowUpward, contentDescription = "Up", tint = if (index > 0) BmkNavy else Color.Gray, modifier = Modifier.size(16.dp))
+                                        }
+
+                                        IconButton(
+                                            onClick = {
+                                                if (index < truckCargos.size - 1) {
+                                                    viewModel.swapCargoSequenceOnTruck(truckCargos, index, index + 1)
+                                                }
+                                            },
+                                            enabled = index < truckCargos.size - 1,
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(Icons.Default.ArrowDownward, contentDescription = "Down", tint = if (index < truckCargos.size - 1) BmkNavy else Color.Gray, modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { selectedTruckForList = null }, colors = ButtonDefaults.buttonColors(containerColor = BmkNavy)) {
+                    Text("ပိတ်မည်", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            }
+        )
+    }
+
+    // Assign to Truck Dialog
+    if (showAssignTruckDialog) {
+        AlertDialog(
+            onDismissRequest = { showAssignTruckDialog = false },
+            containerColor = Color.White,
+            title = { Text("ရွေးချယ်ထားသော ပစ္စည်း (${selectedCargoIds.size}) ထုပ်ကို ကားပေါ်တင်မည်", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = BmkNavy) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("ကားတစ်စီး ရွေးချယ်ပါ သို့မဟုတ် ကားအသစ် ပေါင်းထည့်ပါ:", fontSize = 12.sp, color = TextPrimary)
+
+                    allTrucks.forEach { truck ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.assignSelectedCargosToTruck(
+                                        cargoIds = selectedCargoIds.toList(),
+                                        truck = truck,
+                                        onSuccess = {
+                                            showAssignTruckDialog = false
+                                            isSelectionMode = false
+                                            selectedCargoIds.clear()
+                                            Toast.makeText(context, "${truck.truckNumber} ကားပေါ်သို့ ပစ္စည်းများ အောင်မြင်စွာ တင်လိုက်ပါပြီ", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+                                },
+                            colors = CardDefaults.cardColors(containerColor = SurfaceLight),
+                            border = BorderStroke(1.dp, CardBorderColor)
+                        ) {
+                            Row(modifier = Modifier.padding(10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Column {
+                                    Text(truck.truckNumber, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BmkNavy)
+                                    Text("ကားသမား: ${truck.driverName} (${truck.driverPhone})", fontSize = 11.sp, color = TextPrimary)
+                                }
+                                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = BmkOrange)
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = { showAddTruckInAssignDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = BmkOrange),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("+ ကားအသစ် ပေါင်းထည့်၍ တင်မည် (Add Car)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showAssignTruckDialog = false }) {
+                    Text("မလုပ်တော့ပါ", color = TextSecondary, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    // Add New Truck inside Assign Dialog
+    if (showAddTruckInAssignDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddTruckInAssignDialog = false },
+            containerColor = Color.White,
+            title = { Text("၁၂ ဘီး ကားအသစ် ပေါင်းထည့်ရန်", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = BmkNavy) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = newTruckNumber, onValueChange = { newTruckNumber = it }, label = { Text("ကားနံပါတ် (Car Number)") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = newOwnerName, onValueChange = { newOwnerName = it }, label = { Text("ကားပိုင်ရှင် အမည်") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = newDriverName, onValueChange = { newDriverName = it }, label = { Text("မောင်းသူ / ကားသမား အမည်") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = newDriverPhone, onValueChange = { newDriverPhone = it }, label = { Text("ဖုန်းနံပါတ်") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = newPriceStr, onValueChange = { newPriceStr = it }, label = { Text("မန္တလေး - ကလေး ကားခ (ကျပ်)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = newAdvanceStr, onValueChange = { newAdvanceStr = it }, label = { Text("ကြိုထုတ်ငွေ (ကျပ်)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val price = newPriceStr.toDoubleOrNull() ?: 1500000.0
+                        val advance = newAdvanceStr.toDoubleOrNull() ?: 0.0
+                        viewModel.registerTruck(
+                            truckNumber = newTruckNumber,
+                            ownerName = newOwnerName,
+                            driverName = newDriverName,
+                            driverPhone = newDriverPhone,
+                            mandalayToKalayFreightPrice = price,
+                            advancePayment = advance,
+                            dispatchDate = newDispatchDate,
+                            notes = "",
+                            onSuccess = { createdTruck ->
+                                viewModel.assignSelectedCargosToTruck(
+                                    cargoIds = selectedCargoIds.toList(),
+                                    truck = createdTruck,
+                                    onSuccess = {
+                                        showAddTruckInAssignDialog = false
+                                        showAssignTruckDialog = false
+                                        isSelectionMode = false
+                                        selectedCargoIds.clear()
+                                        Toast.makeText(context, "${createdTruck.truckNumber} ပေါ်သို့ တင်လိုက်ပါပြီ", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                            }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BmkOrange)
+                ) {
+                    Text("သိမ်းဆည်း၍ ကားပေါ်တင်မည်", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddTruckInAssignDialog = false }) {
+                    Text("မလုပ်တော့ပါ", color = TextSecondary, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    // Cargo Detail Dialog
     selectedCargoDetails?.let { cargo ->
         AlertDialog(
             onDismissRequest = { selectedCargoDetails = null },
@@ -208,14 +770,14 @@ fun MandalayTabScreen(
                         color = BmkNavy
                     )
                     Surface(
-                        color = if (cargo.isShuttlePickup) StatusOrangeBg else StatusBlueBg,
+                        color = if (cargo.cargoDensityType == "BULK") BulkPurpleBg else BmkNavy.copy(alpha = 0.12f),
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
-                            text = if (cargo.isShuttlePickup) "ခေါက်တို" else "ဂိတ်လာပို့",
+                            text = if (cargo.cargoDensityType == "BULK") "ကုန်ပွ" else "ကုန်မာ",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (cargo.isShuttlePickup) StatusOrangeText else StatusBlueText,
+                            color = if (cargo.cargoDensityType == "BULK") BulkPurpleText else BmkNavy,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
@@ -224,22 +786,15 @@ fun MandalayTabScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("• ကုန်ပစ္စည်း အမည်: ${cargo.cargoName.ifBlank { cargo.itemDescription }}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
-                    Text("• ကုန်အမျိုးအစား: ${if (cargo.cargoDensityType == "HEAVY") "ကုန်မာ (Heavy Cargo)" else "ကုန်ပွ (Bulk Cargo)"}", fontSize = 12.sp, color = TextSecondary)
                     Text("• အရေအတွက် & ယူနစ်: ${cargo.quantity} ${cargo.weightUnit}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text("• တစ်ခု အလေးချိန်: ${cargo.unitWeight} ${cargo.weightUnit}", fontSize = 12.sp, color = TextSecondary)
-                    Text("• စုစုပေါင်း အလေးချိန်: ${cargo.weightViss} ပိဿာ / ${String.format("%.1f", cargo.weightKg)} Kg", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BmkNavy)
+                    Text("• အလေးချိန်: ${cargo.weightViss} ပိဿာ / ${String.format("%.1f", cargo.weightKg)} Kg", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BmkNavy)
                     Divider(color = CardBorderColor)
                     Text("• ပို့သူ: ${cargo.senderName} (${cargo.senderPhone})", fontSize = 12.sp, color = TextPrimary)
                     if (cargo.senderAddress.isNotBlank()) Text("  မန္တလေး လိပ်စာ: ${cargo.senderAddress}", fontSize = 11.sp, color = TextSecondary)
                     Text("• ကလေးမြို့ လက်ခံသူ: ${cargo.receiverName} (${cargo.receiverPhone})", fontSize = 12.sp, color = TextPrimary)
                     Text("  ကလေးမြို့ ဆိုင်လိပ်စာ: ${cargo.receiverShopAddress}", fontSize = 11.sp, color = TextSecondary)
                     Divider(color = CardBorderColor)
-                    Text("• သတ်မှတ် ၁၂ ဘီး ကား: ${cargo.truckNumber}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BmkNavy)
-                    Text("• တန်ဆာခ: ${currencyFormat.format(cargo.freightFee)} ကျပ်", fontSize = 12.sp)
-                    Text("• မန္တလေး ၁၂ ဘီး တင်ခ: ${currencyFormat.format(cargo.mdyLoadingLaborFee)} ကျပ်", fontSize = 12.sp)
-                    if (cargo.isShuttlePickup) {
-                        Text("• ခေါက်တို ကြေး + အလုပ်သမားခ: ${currencyFormat.format(cargo.shuttleFee + cargo.shuttleLaborFee)} ကျပ်", fontSize = 12.sp, color = BmkOrange)
-                    }
+                    if (cargo.truckNumber.isNotBlank()) Text("• သတ်မှတ် ၁၂ ဘီး ကား: ${cargo.truckNumber}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BmkNavy)
                     Text("• စုစုပေါင်း ကျသင့်ငွေ: ${currencyFormat.format(cargo.totalAmount)} ကျပ် (${cargo.paymentStatus})", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = BmkOrange)
                 }
             },
@@ -253,7 +808,7 @@ fun MandalayTabScreen(
                 ) {
                     Icon(Icons.Default.Call, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("ပို့သူ ဖုန်းခေါ်မည်")
+                    Text("ဖုန်းခေါ်မည်")
                 }
             },
             dismissButton = {
@@ -264,7 +819,7 @@ fun MandalayTabScreen(
         )
     }
 
-    // Refactored Intake Form Dialog matching exact 10 items
+    // Refactored Intake Form Dialog
     if (showIntakeForm) {
         AlertDialog(
             onDismissRequest = { showIntakeForm = false },
@@ -306,10 +861,10 @@ fun MandalayTabScreen(
                             Button(
                                 onClick = { cargoDensityType = "BULK" },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (cargoDensityType == "BULK") BmkOrange else SurfaceLight,
+                                    containerColor = if (cargoDensityType == "BULK") BulkPurpleBright else SurfaceLight,
                                     contentColor = if (cargoDensityType == "BULK") Color.White else TextPrimary
                                 ),
-                                border = BorderStroke(1.dp, if (cargoDensityType == "BULK") BmkOrange else Color(0xFFCBD5E1)),
+                                border = BorderStroke(1.dp, if (cargoDensityType == "BULK") BulkPurpleBright else Color(0xFFCBD5E1)),
                                 modifier = Modifier.weight(1f)
                             ) { Text("ကုန်ပွ (Bulk)", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
                         }
@@ -322,15 +877,14 @@ fun MandalayTabScreen(
                             onValueChange = { cargoName = it },
                             label = { Text("၂။ ကုန်ပစ္စည်း အမည် (e.g. ကြွေပြား)") },
                             modifier = Modifier.fillMaxWidth().testTag("input_cargo_name"),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = BmkNavy, unfocusedBorderColor = Color(0xFF94A3B8), focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                            singleLine = true
                         )
                     }
 
                     // 3. တစ်ခု အလေးချိန် + (ပိဿာ or Kg)
                     item {
                         Column {
-                            Text("၃။ တစ်ခု အလေးချိန် (Weight per item):", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BmkNavy)
+                            Text("၃။ တစ်ခု အလေးချိန်:", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BmkNavy)
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -343,11 +897,9 @@ fun MandalayTabScreen(
                                     label = { Text("တစ်ခု အလေးချိန် (e.g. 3.2)") },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     modifier = Modifier.weight(1.3f).testTag("input_unit_weight"),
-                                    singleLine = true,
-                                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = BmkNavy, unfocusedBorderColor = Color(0xFF94A3B8), focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                                    singleLine = true
                                 )
 
-                                // Radio/Segmented Selection for "ပိဿာ" or "Kg"
                                 Row(
                                     modifier = Modifier
                                         .weight(1.2f)
@@ -358,24 +910,14 @@ fun MandalayTabScreen(
                                         selected = weightTypeUnit == "ပိဿာ",
                                         onClick = { weightTypeUnit = "ပိဿာ" },
                                         label = { Text("ပိဿာ", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = BmkNavy,
-                                            selectedLabelColor = Color.White,
-                                            containerColor = Color.Transparent,
-                                            labelColor = TextPrimary
-                                        ),
+                                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BmkNavy, selectedLabelColor = Color.White),
                                         modifier = Modifier.weight(1f)
                                     )
                                     FilterChip(
                                         selected = weightTypeUnit == "Kg",
                                         onClick = { weightTypeUnit = "Kg" },
                                         label = { Text("Kg", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = BmkNavy,
-                                            selectedLabelColor = Color.White,
-                                            containerColor = Color.Transparent,
-                                            labelColor = TextPrimary
-                                        ),
+                                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BmkNavy, selectedLabelColor = Color.White),
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
@@ -386,7 +928,7 @@ fun MandalayTabScreen(
                     // 4. Customer လာအပ်သော အရေအတွက် + ဘေးတွင် ယူနစ် (ဖာ, ခု, အိတ်, ပုံး, etc)
                     item {
                         Column {
-                            Text("၄။ Customer လာအပ်သော အရေအတွက် နှင့် ယူနစ်:", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BmkNavy)
+                            Text("၄။ အရေအတွက် နှင့် ယူနစ်:", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BmkNavy)
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -398,8 +940,7 @@ fun MandalayTabScreen(
                                     label = { Text("အရေအတွက် (e.g. 50)") },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     modifier = Modifier.weight(1.2f).testTag("input_cargo_quantity"),
-                                    singleLine = true,
-                                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = BmkNavy, unfocusedBorderColor = Color(0xFF94A3B8), focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                                    singleLine = true
                                 )
 
                                 ExposedDropdownMenuBox(
@@ -413,8 +954,7 @@ fun MandalayTabScreen(
                                         readOnly = true,
                                         label = { Text("ယူနစ် (e.g. ဖာ)") },
                                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isPackageUnitDropdownExpanded) },
-                                        modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = BmkNavy, unfocusedBorderColor = Color(0xFF94A3B8), focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                                        modifier = Modifier.menuAnchor().fillMaxWidth()
                                     )
                                     ExposedDropdownMenu(
                                         expanded = isPackageUnitDropdownExpanded,
@@ -466,12 +1006,11 @@ fun MandalayTabScreen(
                             value = itemDescription,
                             onValueChange = { itemDescription = it },
                             label = { Text("၅။ ကုန်ပစ္စည်း အသေးစိတ် ဖော်ပြချက်") },
-                            modifier = Modifier.fillMaxWidth().testTag("input_item_description"),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = BmkNavy, unfocusedBorderColor = Color(0xFF94A3B8), focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                            modifier = Modifier.fillMaxWidth().testTag("input_item_description")
                         )
                     }
 
-                    // ၆။ ပို့သူ (မန္တလေးဂိတ်) - အမည်၊ ဖုန်းနံပါတ်၊ Mandalay Address
+                    // ၆။ ပို့သူ (မန္တလေးဂိတ်)
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("၆။ ပို့သူ (မန္တလေးဂိတ်):", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BmkNavy)
@@ -480,8 +1019,7 @@ fun MandalayTabScreen(
                                 onValueChange = { senderName = it },
                                 label = { Text("အမည်") },
                                 modifier = Modifier.fillMaxWidth().testTag("input_sender_name"),
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = BmkNavy, unfocusedBorderColor = Color(0xFF94A3B8), focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                                singleLine = true
                             )
                             OutlinedTextField(
                                 value = senderPhone,
@@ -489,15 +1027,13 @@ fun MandalayTabScreen(
                                 label = { Text("ဖုန်းနံပါတ်") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                                 modifier = Modifier.fillMaxWidth().testTag("input_sender_phone"),
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = BmkNavy, unfocusedBorderColor = Color(0xFF94A3B8), focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                                singleLine = true
                             )
                             OutlinedTextField(
                                 value = senderAddress,
                                 onValueChange = { senderAddress = it },
                                 label = { Text("မန္တလေး လိပ်စာ (Mandalay Address)") },
-                                modifier = Modifier.fillMaxWidth().testTag("input_sender_address"),
-                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = BmkNavy, unfocusedBorderColor = Color(0xFF94A3B8), focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                                modifier = Modifier.fillMaxWidth().testTag("input_sender_address")
                             )
                         }
                     }
@@ -549,8 +1085,7 @@ fun MandalayTabScreen(
                                 onValueChange = { receiverName = it },
                                 label = { Text("အမည်") },
                                 modifier = Modifier.fillMaxWidth().testTag("input_receiver_name"),
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = BmkNavy, unfocusedBorderColor = Color(0xFF94A3B8), focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                                singleLine = true
                             )
                             OutlinedTextField(
                                 value = receiverPhone,
@@ -558,15 +1093,13 @@ fun MandalayTabScreen(
                                 label = { Text("ဖုန်းနံပါတ်") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                                 modifier = Modifier.fillMaxWidth().testTag("input_receiver_phone"),
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = BmkNavy, unfocusedBorderColor = Color(0xFF94A3B8), focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                                singleLine = true
                             )
                             OutlinedTextField(
                                 value = receiverShopAddress,
                                 onValueChange = { receiverShopAddress = it },
                                 label = { Text("ကလေးမြို့ ပို့ရမည့် ဆိုင် / လိပ်စာ") },
-                                modifier = Modifier.fillMaxWidth().testTag("input_receiver_shop_address"),
-                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = BmkNavy, unfocusedBorderColor = Color(0xFF94A3B8), focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                                modifier = Modifier.fillMaxWidth().testTag("input_receiver_shop_address")
                             )
                         }
                     }
@@ -586,8 +1119,7 @@ fun MandalayTabScreen(
                                     readOnly = true,
                                     label = { Text("သတ်မှတ် ၁၂ ဘီး ကား") },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isTruckDropdownExpanded) },
-                                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = BmkNavy, unfocusedBorderColor = Color(0xFF94A3B8), focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                                    modifier = Modifier.menuAnchor().fillMaxWidth()
                                 )
                                 ExposedDropdownMenu(
                                     expanded = isTruckDropdownExpanded,
@@ -634,11 +1166,10 @@ fun MandalayTabScreen(
                     }
                 }
             },
-            // ၁၀။ Cancel သို့မဟုတ် စာရင်းသွင်းမည်
             confirmButton = {
                 Button(
                     onClick = {
-                        if (cargoName.isBlank() || senderName.isBlank() || receiverName.isBlank() || senderPhone.isBlank()) {
+                        if (cargoName.isBlank() || senderName.isBlank() || receiverName.isBlank()) {
                             Toast.makeText(context, "ကျေးဇူးပြု၍ ကုန်အမည်၊ ပို့သူ နှင့် လက်ခံသူ ဖြည့်သွင်းပါ", Toast.LENGTH_SHORT).show()
                         } else {
                             viewModel.registerCargoIntake(
@@ -715,89 +1246,5 @@ fun MandalayTabScreen(
                 if (parsed.description.isNotBlank()) itemDescription = parsed.description
             }
         )
-    }
-}
-
-@Composable
-fun CompactMandalayCargoListItem(
-    cargo: CargoEntity,
-    currencyFormat: NumberFormat,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .testTag("cargo_list_item_${cargo.trackingNumber}"),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, CardBorderColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = cargo.cargoName.ifBlank { cargo.itemDescription },
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = BmkNavy
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Surface(
-                        color = if (cargo.cargoDensityType == "HEAVY") BmkNavy.copy(alpha = 0.12f) else StatusOrangeBg,
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            text = if (cargo.cargoDensityType == "HEAVY") "ကုန်မာ" else "ကုန်ပွ",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (cargo.cargoDensityType == "HEAVY") BmkNavy else StatusOrangeText,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "အရေအတွက်: ${cargo.quantity} ${cargo.weightUnit} (${cargo.weightViss} ပိဿာ)",
-                    fontSize = 12.sp,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "ပို့သူ: ${cargo.senderName} (${cargo.senderPhone})",
-                    fontSize = 11.sp,
-                    color = TextSecondary
-                )
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "${currencyFormat.format(cargo.totalAmount)} ကျပ်",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = BmkOrange
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "အသေးစိတ်ကြည့်ပါ",
-                        fontSize = 10.sp,
-                        color = BmkNavy,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = BmkNavy,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
-        }
     }
 }

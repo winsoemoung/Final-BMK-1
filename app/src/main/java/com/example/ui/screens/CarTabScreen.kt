@@ -24,15 +24,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.data.model.CargoEntity
 import com.example.data.model.TruckEntity
+import com.example.ui.components.AiAssistantDialog
 import com.example.ui.theme.*
+import com.example.ui.viewmodel.AiLogisticsViewModel
 import com.example.ui.viewmodel.BmkViewModel
 import java.text.NumberFormat
 import java.util.Locale
-
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ui.components.AiAssistantDialog
-import com.example.ui.viewmodel.AiLogisticsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,6 +42,9 @@ fun CarTabScreen(
 ) {
     val context = LocalContext.current
     val allTrucks by viewModel.allTrucks.collectAsState()
+    val allCargo by viewModel.allCargo.collectAsState()
+    val truckSearchQuery by viewModel.truckSearchQuery.collectAsState()
+    val truckSearchResults by viewModel.truckSearchResults.collectAsState()
     val settingsState by viewModel.settingsState.collectAsState()
     val currencyFormat = remember { NumberFormat.getNumberInstance(Locale.US) }
 
@@ -49,10 +52,13 @@ fun CarTabScreen(
     var showAddTruckDialog by remember { mutableStateOf(false) }
     var selectedTruckDetails by remember { mutableStateOf<TruckEntity?>(null) }
 
-    var truckNumber by remember { mutableStateOf("MDY 9B-5544 (12-Wheeler)") }
-    var driverName by remember { mutableStateOf("ဦးစိုးမြင့် (Driver U Soe Myint)") }
+    // Form fields for Add Car
+    var truckNumber by remember { mutableStateOf("3N-776445 (12-Wheeler)") }
+    var ownerName by remember { mutableStateOf("ဦးဝင်းအောင်") }
+    var driverName by remember { mutableStateOf("ဦးစိုးမြင့်") }
     var driverPhone by remember { mutableStateOf("0945009988") }
     var priceStr by remember { mutableStateOf("1500000") }
+    var advanceStr by remember { mutableStateOf("200000") }
     var dispatchDate by remember { mutableStateOf("2026-10-26") }
     var notes by remember { mutableStateOf("") }
 
@@ -62,13 +68,13 @@ fun CarTabScreen(
                 title = {
                     Column {
                         Text(
-                            text = if (settingsState.language == "my") "ကား / ကားသမား စာရင်း (Car & Drivers)" else "Truck & Driver Fleet",
+                            text = if (settingsState.language == "my") "ကား / ကားသမား စာရင်း (Car & Fleet)" else "Truck Fleet",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
                             color = Color.White
                         )
                         Text(
-                            text = if (settingsState.language == "my") "၁၂ ဘီး ကားများနှင့် ခရီးစဉ်များ" else "12-Wheeler Mandalay-Kalay Fleet",
+                            text = "၁၂ ဘီး ကားများနှင့် ငှာမ်းခဲ့သော စာရင်းများ",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.9f)
                         )
@@ -95,42 +101,78 @@ fun CarTabScreen(
                 containerColor = BmkOrange,
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text(if (settingsState.language == "my") "၁၂ ဘီး ကားသစ် ထည့်မည်" else "Add 12-Wheeler", fontWeight = FontWeight.Bold, fontSize = 14.sp) },
+                text = { Text("ကားအသစ် ပေါင်းထည့်မည် (Add Car)", fontWeight = FontWeight.Bold, fontSize = 13.sp) },
                 modifier = Modifier.testTag("fab_add_truck")
             )
         }
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(SurfaceLight),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .background(SurfaceLight)
         ) {
-
-            item {
-                Text(
-                    text = "၁၂ ဘီး ကားများ စာရင်း (${allTrucks.size} စီး) - [ကားအမည်ကို နှိပ်၍ အသေးစိတ်ကြည့်ပါ]",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+            // Search Bar for Rented / Dispatched Trucks
+            Surface(
+                color = CardBackground,
+                shadowElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = truckSearchQuery,
+                    onValueChange = { viewModel.setTruckSearchQuery(it) },
+                    placeholder = { Text("ကားနံပါတ်၊ ပိုင်ရှင် သို့မဟုတ် ယာဉ်မောင်း ရှာရန်...", fontSize = 12.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = BmkNavy) },
+                    trailingIcon = {
+                        if (truckSearchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.setTruckSearchQuery("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = null)
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                        .testTag("search_truck_input"),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BmkNavy,
+                        unfocusedBorderColor = CardBorderColor
+                    )
                 )
             }
 
-            // Compact Truck List Items
-            items(allTrucks) { truck ->
-                CompactTruckListItem(
-                    truck = truck,
-                    currencyFormat = currencyFormat,
-                    onClick = { selectedTruckDetails = truck }
-                )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    Text(
+                        text = "ငှာမ်းခဲ့သော ကားစာရင်းများ (${truckSearchResults.size} စီး) - [နံပါတ် သို့မဟုတ် အမည်ကို နှိပ်၍ အသေးစိတ်ကြည့်ပါ]",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                }
+
+                items(truckSearchResults) { truck ->
+                    CompactTruckRowItem(
+                        truck = truck,
+                        currencyFormat = currencyFormat,
+                        onClick = { selectedTruckDetails = truck }
+                    )
+                }
             }
         }
     }
 
-    // Truck Detail Modal Dialog when tapped
+    // Truck Detail Modal Dialog when tapped (Includes 1..N Numbered Loaded Cargo List)
     selectedTruckDetails?.let { truck ->
+        val loadedCargos = remember(allCargo, truck) {
+            allCargo.filter { it.truckId == truck.id || it.truckNumber == truck.truckNumber }.sortedBy { it.sequenceOrder }
+        }
+
         AlertDialog(
             onDismissRequest = { selectedTruckDetails = null },
             containerColor = Color.White,
@@ -146,30 +188,33 @@ fun CarTabScreen(
                         fontSize = 16.sp,
                         color = BmkNavy
                     )
-                    Surface(
-                        color = when (truck.status) {
-                            "LOADING" -> StatusAmberBg
-                            "IN_TRANSIT" -> StatusBlueBg
-                            "KALAY_ARRIVED" -> StatusOrangeBg
-                            else -> StatusGreenBg
-                        },
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
+
+                    // Truck Status Badge with distinct colors
+                    val statusText = when (truck.status) {
+                        "EMPTY" -> "ကုန်မရှိ"
+                        "LOADING" -> "ကုန်တင်ပြီး"
+                        "IN_TRANSIT" -> "စထွက်သွား"
+                        else -> "ကလေးရောက် ကုန်ချပြီး"
+                    }
+                    val statusBg = when (truck.status) {
+                        "EMPTY" -> SurfaceLight
+                        "LOADING" -> StatusBlueBg
+                        "IN_TRANSIT" -> StatusOrangeBg
+                        else -> StatusGreenBg
+                    }
+                    val statusColor = when (truck.status) {
+                        "EMPTY" -> TextMuted
+                        "LOADING" -> StatusBlueText
+                        "IN_TRANSIT" -> StatusOrangeText
+                        else -> StatusGreenText
+                    }
+
+                    Surface(color = statusBg, shape = RoundedCornerShape(8.dp)) {
                         Text(
-                            text = when (truck.status) {
-                                "LOADING" -> "၁၂ ဘီး တင်နေဆဲ"
-                                "IN_TRANSIT" -> "လမ်းခရီးတွင်"
-                                "KALAY_ARRIVED" -> "ကလေးမြို့ဆိုက်"
-                                else -> "ပြီးစီး"
-                            },
+                            text = statusText,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = when (truck.status) {
-                                "LOADING" -> StatusAmberText
-                                "IN_TRANSIT" -> StatusBlueText
-                                "KALAY_ARRIVED" -> StatusOrangeText
-                                else -> StatusGreenText
-                            },
+                            color = statusColor,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
@@ -177,26 +222,53 @@ fun CarTabScreen(
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("• ကားသမား/ယာဉ်မောင်း: ${truck.driverName}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
-                    Text("• ကားသမား ဖုန်း: ${truck.driverPhone}", fontSize = 12.sp, color = BmkOrange, fontWeight = FontWeight.Bold)
-                    Text("• မန္တလေး - ကလေး ၁၂ ဘီး ကားခ: ${currencyFormat.format(truck.mandalayToKalayFreightPrice)} ကျပ်", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = BmkNavy)
+                    if (truck.ownerName.isNotBlank()) {
+                        Text("• ကားပိုင်ရှင် အမည်: ${truck.ownerName}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BmkNavy)
+                    }
+                    Text("• မောင်းသူ/ကားသမား: ${truck.driverName}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
+                    Text("• ဖုန်းနံပါတ်: ${truck.driverPhone}", fontSize = 12.sp, color = BmkOrange, fontWeight = FontWeight.Bold)
+                    Text("• ကားခ: ${currencyFormat.format(truck.mandalayToKalayFreightPrice)} ကျပ်", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = BmkNavy)
+                    Text("• ကြိုထုတ်ငွေ: ${currencyFormat.format(truck.advancePayment)} ကျပ်", fontSize = 12.sp, color = BmkOrange)
                     Text("• ထွက်ခွာမည့် နေ့ရက်: ${truck.dispatchDate}", fontSize = 12.sp, color = TextSecondary)
-                    if (truck.notes.isNotBlank()) Text("• မှတ်ချက်: ${truck.notes}", fontSize = 11.sp, color = TextMuted)
-                    
+                    if (truck.notes.isNotBlank()) Text("• အထွေထွေ မှတ်ချက်: ${truck.notes}", fontSize = 11.sp, color = TextMuted)
+
                     Divider(color = CardBorderColor)
-                    
-                    Text("ခရီးစဉ် အခြေအနေ ပြောင်းရန်:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+
+                    Text("ကားပေါ်ပါ ကုန်ပစ္စည်းများ စာရင်း (${loadedCargos.size} မျိုး):", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BmkNavy)
+
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.heightIn(max = 220.dp)) {
+                        items(loadedCargos.size) { idx ->
+                            val item = loadedCargos[idx]
+                            Surface(color = SurfaceLight, shape = RoundedCornerShape(6.dp)) {
+                                Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(color = BmkNavy, shape = RoundedCornerShape(4.dp)) {
+                                        Text("#${idx + 1}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(item.cargoName.ifBlank { item.itemDescription }, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = TextPrimary)
+                                        Text("ပို့သူ: ${item.senderName} (${item.quantity} ${item.weightUnit})", fontSize = 10.sp, color = TextSecondary)
+                                    }
+                                    Text("${item.weightViss} ပိဿာ", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = BmkNavy)
+                                }
+                            }
+                        }
+                    }
+
+                    Divider(color = CardBorderColor)
+
+                    Text("အခြေအနေ ပြောင်းရန်:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         listOf(
-                            "LOADING" to "တင်ဆဲ",
-                            "IN_TRANSIT" to "လမ်းခရီး",
-                            "KALAY_ARRIVED" to "ကလေးဆိုက်",
-                            "COMPLETED" to "ပြီးစီး"
+                            "EMPTY" to "ကုန်မရှိ",
+                            "LOADING" to "ကုန်တင်ပြီး",
+                            "IN_TRANSIT" to "စထွက်သွား",
+                            "KALAY_ARRIVED" to "ကလေးရောက် ကုန်ချပြီး"
                         ).forEach { (code, label) ->
                             FilterChip(
                                 selected = truck.status == code,
                                 onClick = { viewModel.updateTruckStatus(truck.id, code) },
-                                label = { Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold) },
+                                label = { Text(label, fontSize = 9.sp, fontWeight = FontWeight.Bold) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = BmkNavy,
                                     selectedLabelColor = Color.White,
@@ -229,43 +301,72 @@ fun CarTabScreen(
         )
     }
 
+    // Add Car Dialog with full fields
     if (showAddTruckDialog) {
         AlertDialog(
             onDismissRequest = { showAddTruckDialog = false },
             containerColor = Color.White,
-            title = { Text("၁၂ ဘီး ကားသစ် စာရင်းသွင်းရန်", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = BmkNavy) },
+            title = { Text("ငှာမ်းခဲ့သော ကားသစ် စာရင်းသွင်းရန် (Add Car)", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = BmkNavy) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = truckNumber,
                         onValueChange = { truckNumber = it },
-                        label = { Text("ယာဉ်အမှတ် (Truck Number)") },
-                        modifier = Modifier.fillMaxWidth().testTag("input_truck_number")
+                        label = { Text("ကားနံပါတ် (Car Number e.g. 3N-776445)") },
+                        modifier = Modifier.fillMaxWidth().testTag("input_truck_number"),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = ownerName,
+                        onValueChange = { ownerName = it },
+                        label = { Text("ကားပိုင်ရှင် အမည် (Owner Name)") },
+                        modifier = Modifier.fillMaxWidth().testTag("input_owner_name"),
+                        singleLine = true
                     )
                     OutlinedTextField(
                         value = driverName,
                         onValueChange = { driverName = it },
-                        label = { Text("ကားသမား / ယာဉ်မောင်း အမည်") },
-                        modifier = Modifier.fillMaxWidth().testTag("input_driver_name")
+                        label = { Text("မောင်းသူ / ကားသမား အမည် (Driver Name)") },
+                        modifier = Modifier.fillMaxWidth().testTag("input_driver_name"),
+                        singleLine = true
                     )
                     OutlinedTextField(
                         value = driverPhone,
                         onValueChange = { driverPhone = it },
-                        label = { Text("ကားသမား ဖုန်းနံပါတ်") },
+                        label = { Text("ဖုန်းနံပါတ်") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        modifier = Modifier.fillMaxWidth().testTag("input_driver_phone")
+                        modifier = Modifier.fillMaxWidth().testTag("input_driver_phone"),
+                        singleLine = true
                     )
-                    OutlinedTextField(
-                        value = priceStr,
-                        onValueChange = { priceStr = it },
-                        label = { Text("မန္တလေး - ကလေး ၁၂ ဘီး ကားခ (ကျပ်)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = priceStr,
+                            onValueChange = { priceStr = it },
+                            label = { Text("ကားခ (ကျပ်)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = advanceStr,
+                            onValueChange = { advanceStr = it },
+                            label = { Text("ကြိုထုတ်ငွေ (ကျပ်)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                    }
                     OutlinedTextField(
                         value = dispatchDate,
                         onValueChange = { dispatchDate = it },
                         label = { Text("ထွက်ခွာမည့် နေ့ရက်") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = notes,
+                        onValueChange = { notes = it },
+                        label = { Text("အထွေထွေ မှတ်ချက်") },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -273,23 +374,26 @@ fun CarTabScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val price = priceStr.toDoubleOrNull() ?: 0.0
+                        val price = priceStr.toDoubleOrNull() ?: 1500000.0
+                        val advance = advanceStr.toDoubleOrNull() ?: 0.0
                         viewModel.registerTruck(
                             truckNumber = truckNumber,
+                            ownerName = ownerName,
                             driverName = driverName,
                             driverPhone = driverPhone,
                             mandalayToKalayFreightPrice = price,
+                            advancePayment = advance,
                             dispatchDate = dispatchDate,
                             notes = notes,
                             onSuccess = {
                                 showAddTruckDialog = false
-                                Toast.makeText(context, "၁၂ ဘီး ကားသစ် စာရင်းသွင်းပြီးပါပြီ", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "ကားသစ် အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ", Toast.LENGTH_SHORT).show()
                             }
                         )
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BmkOrange)
                 ) {
-                    Text("သိမ်းဆည်းမည်", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Save (သိမ်းဆည်းမည်)", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             },
             dismissButton = {
@@ -308,17 +412,37 @@ fun CarTabScreen(
     }
 }
 
+// Compact Truck List Item showing ONLY [ ကားနံပါတ်, ပိုင်ရှင် အမည် or မောင်းသူ အမည် ]
 @Composable
-fun CompactTruckListItem(
+fun CompactTruckRowItem(
     truck: TruckEntity,
     currencyFormat: NumberFormat,
     onClick: () -> Unit
 ) {
+    val statusBg = when (truck.status) {
+        "EMPTY" -> SurfaceLight
+        "LOADING" -> StatusBlueBg
+        "IN_TRANSIT" -> StatusOrangeBg
+        else -> StatusGreenBg
+    }
+    val statusColor = when (truck.status) {
+        "EMPTY" -> TextMuted
+        "LOADING" -> StatusBlueText
+        "IN_TRANSIT" -> StatusOrangeText
+        else -> StatusGreenText
+    }
+    val statusLabel = when (truck.status) {
+        "EMPTY" -> "ကုန်မရှိ"
+        "LOADING" -> "ကုန်တင်ပြီး"
+        "IN_TRANSIT" -> "စထွက်သွား"
+        else -> "ကလေးရောက် ကုန်ချပြီး"
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .testTag("truck_list_item_${truck.id}"),
+            .testTag("truck_row_${truck.id}"),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
         shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, CardBorderColor),
@@ -327,7 +451,7 @@ fun CompactTruckListItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -335,41 +459,28 @@ fun CompactTruckListItem(
                 Text(
                     text = truck.truckNumber,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                     color = BmkNavy
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "ကားသမား: ${truck.driverName} (${truck.driverPhone})",
+                    text = "ပိုင်ရှင်/မောင်းသူ: ${truck.ownerName.ifBlank { truck.driverName }} (${truck.driverPhone})",
                     fontSize = 12.sp,
-                    color = TextPrimary
+                    color = BmkOrange,
+                    fontWeight = FontWeight.Bold
                 )
             }
 
             Column(horizontalAlignment = Alignment.End) {
                 Surface(
-                    color = when (truck.status) {
-                        "LOADING" -> StatusAmberBg
-                        "IN_TRANSIT" -> StatusBlueBg
-                        "KALAY_ARRIVED" -> StatusOrangeBg
-                        else -> StatusGreenBg
-                    },
+                    color = statusBg,
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
-                        text = when (truck.status) {
-                            "LOADING" -> "၁၂ ဘီး တင်ဆဲ"
-                            "IN_TRANSIT" -> "လမ်းခရီးတွင်"
-                            "KALAY_ARRIVED" -> "ကလေးဆိုက်"
-                            else -> "ပြီးစီး"
-                        },
+                        text = statusLabel,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = when (truck.status) {
-                            "LOADING" -> StatusAmberText
-                            "IN_TRANSIT" -> StatusBlueText
-                            "KALAY_ARRIVED" -> StatusOrangeText
-                            else -> StatusGreenText
-                        },
+                        color = statusColor,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }

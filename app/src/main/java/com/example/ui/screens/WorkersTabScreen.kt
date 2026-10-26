@@ -22,15 +22,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.model.WorkerLaborEntity
+import com.example.ui.components.AiAssistantDialog
 import com.example.ui.theme.*
+import com.example.ui.viewmodel.AiLogisticsViewModel
 import com.example.ui.viewmodel.BmkViewModel
 import java.text.NumberFormat
 import java.util.Locale
-
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ui.components.AiAssistantDialog
-import com.example.ui.viewmodel.AiLogisticsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,21 +43,22 @@ fun WorkersTabScreen(
     val currencyFormat = remember { NumberFormat.getNumberInstance(Locale.US) }
 
     var showAiDialog by remember { mutableStateOf(false) }
-    var selectedBranchFilter by remember { mutableStateOf("ALL") }
+    var selectedWageTab by remember { mutableIntStateOf(0) } // 0 = M-wages (Mandalay), 1 = K-wages (Kalay)
+    val wageTabs = listOf("M-wages (မန္တလေးဂိတ်)", "K-wages (ကလေးဂိတ်)")
+
     var selectedLaborDetails by remember { mutableStateOf<WorkerLaborEntity?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
 
-    // Form
-    var gateBranch by remember { mutableStateOf("MANDALAY") }
+    // Form fields
     var workerName by remember { mutableStateOf("") }
     var vissHandledStr by remember { mutableStateOf("500.0") }
     var ratePerVissStr by remember { mutableStateOf("25.0") }
     var shuttleLaborStr by remember { mutableStateOf("0") }
     var notes by remember { mutableStateOf("") }
 
-    val filteredRecords = remember(workerLaborRecords, selectedBranchFilter) {
-        if (selectedBranchFilter == "ALL") workerLaborRecords
-        else workerLaborRecords.filter { it.gateBranch == selectedBranchFilter }
+    val currentBranchFilter = if (selectedWageTab == 0) "MANDALAY" else "KALAY"
+    val filteredRecords = remember(workerLaborRecords, currentBranchFilter) {
+        workerLaborRecords.filter { it.gateBranch == currentBranchFilter }
     }
 
     val totalMdyLaborPaid = workerLaborRecords.filter { it.gateBranch == "MANDALAY" }.sumOf { it.totalLaborPaid }
@@ -76,7 +76,7 @@ fun WorkersTabScreen(
                             color = Color.White
                         )
                         Text(
-                            text = if (settingsState.language == "my") "မန္တလေး နှင့် ကလေးမြို့ ဂိတ် အလုပ်သမားခများ" else "Mandalay Loading (25Ks/viss) & Kalay Unloading (25Ks/viss)",
+                            text = "မန္တလေး တင်ခ (25Ks/viss) နှင့် ကလေး ချခ (25Ks/viss)",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.9f)
                         )
@@ -103,63 +103,101 @@ fun WorkersTabScreen(
                 containerColor = BmkOrange,
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("အလုပ်သမားခ ထည့်မည်", fontWeight = FontWeight.Bold, fontSize = 14.sp) },
+                text = { Text("အလုပ်သမားခ စာရင်းသွင်းမည်", fontWeight = FontWeight.Bold, fontSize = 13.sp) },
                 modifier = Modifier.testTag("fab_add_worker_labor")
             )
         }
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(SurfaceLight),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .background(SurfaceLight)
         ) {
+            // Sub-tabs: M-wages vs K-wages
+            TabRow(
+                selectedTabIndex = selectedWageTab,
+                containerColor = CardBackground,
+                contentColor = BmkNavy
+            ) {
+                wageTabs.forEachIndexed { index, tabTitle ->
+                    Tab(
+                        selected = selectedWageTab == index,
+                        onClick = { selectedWageTab = index },
+                        text = {
+                            Text(
+                                text = tabTitle,
+                                fontWeight = if (selectedWageTab == index) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 12.sp,
+                                color = if (selectedWageTab == index) BmkNavy else TextSecondary
+                            )
+                        }
+                    )
+                }
+            }
 
-            // Filter chips
-            item {
+            // Summary Card
+            Surface(
+                color = CardBackground,
+                shadowElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    listOf("ALL" to "အားလုံး", "MANDALAY" to "မန္တလေးဂိတ်", "KALAY" to "ကလေးဂိတ်").forEach { (code, label) ->
-                        FilterChip(
-                            selected = selectedBranchFilter == code,
-                            onClick = { selectedBranchFilter = code },
-                            label = { Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = BmkNavy,
-                                selectedLabelColor = Color.White,
-                                containerColor = CardBackground,
-                                labelColor = TextPrimary
-                            ),
-                            border = FilterChipDefaults.filterChipBorder(
-                                enabled = true,
-                                selected = selectedBranchFilter == code,
-                                borderColor = Color(0xFFCBD5E1)
-                            ),
-                            modifier = Modifier.weight(1f)
+                    Column {
+                        Text(
+                            text = if (selectedWageTab == 0) "Mandalay Gate M-wages စုစုပေါင်း" else "Kalay Gate K-wages စုစုပေါင်း",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextSecondary
+                        )
+                        Text(
+                            text = "${currencyFormat.format(if (selectedWageTab == 0) totalMdyLaborPaid else totalKlyLaborPaid)} ကျပ်",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BmkOrange
+                        )
+                    }
+
+                    Surface(
+                        color = if (selectedWageTab == 0) StatusBlueBg else StatusGreenBg,
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = if (selectedWageTab == 0) "25 ကျပ်/ပိဿာ တင်ခ" else "25 ကျပ်/ပိဿာ ချခ",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (selectedWageTab == 0) StatusBlueText else StatusGreenText,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
                 }
             }
 
-            item {
-                Text(
-                    text = "အလုပ်သမား စာရင်းများ - [အမည်ကို နှိပ်၍ အသေးစိတ်ကြည့်ပါ]",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-            }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    Text(
+                        text = "${if (selectedWageTab == 0) "M-wages" else "K-wages"} စာရင်းများ (${filteredRecords.size} ခု) - [အမည်ကို နှိပ်၍ အသေးစိတ်ကြည့်ပါ]",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                }
 
-            items(filteredRecords) { record ->
-                CompactWorkerLaborListItem(
-                    record = record,
-                    currencyFormat = currencyFormat,
-                    onClick = { selectedLaborDetails = record }
-                )
+                items(filteredRecords) { record ->
+                    CompactWorkerRowItem(
+                        record = record,
+                        currencyFormat = currencyFormat,
+                        onClick = { selectedLaborDetails = record }
+                    )
+                }
             }
         }
     }
@@ -171,7 +209,7 @@ fun WorkersTabScreen(
             containerColor = Color.White,
             title = {
                 Text(
-                    text = if (record.gateBranch == "MANDALAY") "မန္တလေးဂိတ် (၁၂ ဘီး တင်ခ)" else "ကလေးမြို့ဂိတ် (၁၂ ဘီး ချခ)",
+                    text = if (record.gateBranch == "MANDALAY") "မန္တလေးဂိတ် M-wages စာရင်း" else "ကလေးမြို့ဂိတ် K-wages စာရင်း",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = BmkNavy
@@ -179,7 +217,7 @@ fun WorkersTabScreen(
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("• အလုပ်သမား/အဖွဲ့: ${record.workerName}", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text("• အလုပ်သမား / အဖွဲ့ အမည်: ${record.workerName}", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
                     Text("• နေ့ရက်: ${record.date}", fontSize = 12.sp, color = TextSecondary)
                     Text("• မနိန်းကုန် ပိဿာ: ${record.vissHandled} ပိဿာ", fontSize = 12.sp, color = TextPrimary)
                     Text("• ၁ ပိဿာ လုပ်အားခ: ${record.laborRatePerViss} ကျပ်/ပိဿာ", fontSize = 12.sp, color = TextPrimary)
@@ -198,58 +236,67 @@ fun WorkersTabScreen(
         )
     }
 
+    // Add Worker Labor Dialog
     if (showAddDialog) {
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
             containerColor = Color.White,
-            title = { Text("အလုပ်သမားခ ထည့်ရန်", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = BmkNavy) },
+            title = { Text("အလုပ်သမားခ စာရင်းသွင်းရန်", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = BmkNavy) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("ဂိတ် ရွေးချယ်ပါ:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
-                            selected = gateBranch == "MANDALAY",
-                            onClick = { gateBranch = "MANDALAY" },
-                            label = { Text("မန္တလေးဂိတ်", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                            selected = selectedWageTab == 0,
+                            onClick = { selectedWageTab = 0 },
+                            label = { Text("M-wages (မန္တလေး)", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BmkNavy, selectedLabelColor = Color.White),
                             modifier = Modifier.weight(1f)
                         )
                         FilterChip(
-                            selected = gateBranch == "KALAY",
-                            onClick = { gateBranch = "KALAY" },
-                            label = { Text("ကလေးဂိတ်", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                            selected = selectedWageTab == 1,
+                            onClick = { selectedWageTab = 1 },
+                            label = { Text("K-wages (ကလေး)", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BmkNavy, selectedLabelColor = Color.White),
                             modifier = Modifier.weight(1f)
                         )
                     }
+
                     OutlinedTextField(
                         value = workerName,
                         onValueChange = { workerName = it },
                         label = { Text("အလုပ်သမား / အဖွဲ့ အမည်") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testTag("input_worker_name"),
+                        singleLine = true
                     )
                     OutlinedTextField(
                         value = vissHandledStr,
                         onValueChange = { vissHandledStr = it },
-                        label = { Text("မနိန်းကုန် ပိဿာ") },
+                        label = { Text("မနိန်းကုန် ပိဿာ (viss)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
                     )
                     OutlinedTextField(
                         value = ratePerVissStr,
                         onValueChange = { ratePerVissStr = it },
-                        label = { Text("၁ ပိဿာ အလုပ်သမားခ (ကျပ်)") },
+                        label = { Text("၁ ပိဿာ လုပ်အားခ (ကျပ်/ပိဿာ)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
                     )
                     OutlinedTextField(
                         value = shuttleLaborStr,
                         onValueChange = { shuttleLaborStr = it },
                         label = { Text("ခေါက်တို အလုပ်သမားခ (ကျပ်)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
                     )
                     OutlinedTextField(
                         value = notes,
                         onValueChange = { notes = it },
-                        label = { Text("မှတ်ချက်") },
+                        label = { Text("အထွေထွေ မှတ်ချက်") },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -261,22 +308,22 @@ fun WorkersTabScreen(
                         val rate = ratePerVissStr.toDoubleOrNull() ?: 25.0
                         val shuttle = shuttleLaborStr.toDoubleOrNull() ?: 0.0
                         viewModel.addWorkerLabor(
-                            gateBranch = gateBranch,
+                            gateBranch = currentBranchFilter,
                             workerName = workerName,
-                            date = "2026-10-25",
+                            date = "2026-10-26",
                             vissHandled = viss,
                             laborRatePerViss = rate,
                             shuttleLaborAmount = shuttle,
                             notes = notes,
                             onSuccess = {
                                 showAddDialog = false
-                                Toast.makeText(context, "အလုပ်သမားခ စာရင်းသွင်းပြီးပါပြီ", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "အလုပ်သမားခ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ", Toast.LENGTH_SHORT).show()
                             }
                         )
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BmkOrange)
                 ) {
-                    Text("သိမ်းဆည်းမည်", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Save (သိမ်းဆည်းမည်)", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             },
             dismissButton = {
@@ -296,7 +343,7 @@ fun WorkersTabScreen(
 }
 
 @Composable
-fun CompactWorkerLaborListItem(
+fun CompactWorkerRowItem(
     record: WorkerLaborEntity,
     currencyFormat: NumberFormat,
     onClick: () -> Unit
@@ -305,7 +352,7 @@ fun CompactWorkerLaborListItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .testTag("worker_item_${record.id}"),
+            .testTag("worker_row_${record.id}"),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
         shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, CardBorderColor),
@@ -314,7 +361,7 @@ fun CompactWorkerLaborListItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -332,7 +379,7 @@ fun CompactWorkerLaborListItem(
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
-                            text = if (record.gateBranch == "MANDALAY") "မန္တလေး" else "ကလေး",
+                            text = if (record.gateBranch == "MANDALAY") "M-wages" else "K-wages",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (record.gateBranch == "MANDALAY") StatusBlueText else StatusGreenText,
@@ -342,7 +389,7 @@ fun CompactWorkerLaborListItem(
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "ကုန်ပိဿာ: ${record.vissHandled} ပိဿာ (${record.laborRatePerViss} ကျပ်/ပိဿာ)",
+                    text = "မနိန်းကုန်: ${record.vissHandled} ပိဿာ (${record.laborRatePerViss} ကျပ်/ပိဿာ)",
                     fontSize = 12.sp,
                     color = TextPrimary
                 )

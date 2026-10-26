@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.example.data.model.CargoEntity
 import com.example.data.model.CompensationEntity
 import com.example.data.model.TruckEntity
@@ -19,6 +20,9 @@ interface CargoDao {
     @Query("SELECT * FROM cargo_shipments WHERE status = :status ORDER BY createdTimestamp DESC")
     fun getCargoByStatus(status: String): Flow<List<CargoEntity>>
 
+    @Query("SELECT * FROM cargo_shipments WHERE truckId = :truckId ORDER BY sequenceOrder ASC, id ASC")
+    fun getCargosByTruckId(truckId: Long): Flow<List<CargoEntity>>
+
     @Query("SELECT * FROM cargo_shipments WHERE trackingNumber = :trackingNumber LIMIT 1")
     suspend fun getCargoByTracking(trackingNumber: String): CargoEntity?
 
@@ -28,11 +32,17 @@ interface CargoDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCargo(cargo: CargoEntity): Long
 
+    @Update
+    suspend fun updateCargoList(cargos: List<CargoEntity>)
+
     @Query("UPDATE cargo_shipments SET status = :status WHERE id = :id")
     suspend fun updateCargoStatus(id: Long, status: String)
 
-    @Query("UPDATE cargo_shipments SET truckId = :truckId, truckNumber = :truckNumber, driverName = :driverName, driverPhone = :driverPhone WHERE id = :id")
-    suspend fun assignTruckToCargo(id: Long, truckId: Long, truckNumber: String, driverName: String, driverPhone: String)
+    @Query("UPDATE cargo_shipments SET truckId = :truckId, truckNumber = :truckNumber, driverName = :driverName, driverPhone = :driverPhone, sequenceOrder = :sequenceOrder, status = 'LOADING_12WHEELER' WHERE id = :id")
+    suspend fun assignTruckToCargo(id: Long, truckId: Long, truckNumber: String, driverName: String, driverPhone: String, sequenceOrder: Int)
+
+    @Query("UPDATE cargo_shipments SET sequenceOrder = :sequenceOrder WHERE id = :id")
+    suspend fun updateCargoSequence(id: Long, sequenceOrder: Int)
 
     @Delete
     suspend fun deleteCargo(cargo: CargoEntity)
@@ -49,11 +59,17 @@ interface TruckDao {
     @Query("SELECT * FROM truck_drivers ORDER BY id DESC")
     fun getAllTrucks(): Flow<List<TruckEntity>>
 
+    @Query("SELECT * FROM truck_drivers WHERE truckNumber LIKE '%' || :query || '%' OR driverName LIKE '%' || :query || '%' OR ownerName LIKE '%' || :query || '%' OR dispatchDate LIKE '%' || :query || '%' ORDER BY id DESC")
+    fun searchTrucks(query: String): Flow<List<TruckEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTruck(truck: TruckEntity): Long
 
     @Query("UPDATE truck_drivers SET status = :status WHERE id = :id")
     suspend fun updateTruckStatus(id: Long, status: String)
+
+    @Query("UPDATE truck_drivers SET totalVissLoaded = :viss, totalCargosCount = :count WHERE id = :id")
+    suspend fun updateTruckTotals(id: Long, viss: Double, count: Int)
 }
 
 @Dao

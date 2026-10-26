@@ -22,6 +22,8 @@ class BmkRepository(
 
     fun getCargoByStatus(status: String): Flow<List<CargoEntity>> = cargoDao.getCargoByStatus(status)
 
+    fun getCargosByTruckId(truckId: Long): Flow<List<CargoEntity>> = cargoDao.getCargosByTruckId(truckId)
+
     fun searchCargo(query: String): Flow<List<CargoEntity>> = cargoDao.searchCargo(query)
 
     suspend fun getCargoByTracking(trackingNumber: String): CargoEntity? = cargoDao.getCargoByTracking(trackingNumber)
@@ -30,14 +32,34 @@ class BmkRepository(
 
     suspend fun updateCargoStatus(id: Long, status: String) = cargoDao.updateCargoStatus(id, status)
 
-    suspend fun assignTruck(cargoId: Long, truckId: Long, truckNumber: String, driverName: String, driverPhone: String) {
-        cargoDao.assignTruckToCargo(cargoId, truckId, truckNumber, driverName, driverPhone)
+    suspend fun assignTruckToCargoes(
+        cargoIds: List<Long>,
+        truckId: Long,
+        truckNumber: String,
+        driverName: String,
+        driverPhone: String
+    ) {
+        cargoIds.forEachIndexed { index, cargoId ->
+            cargoDao.assignTruckToCargo(cargoId, truckId, truckNumber, driverName, driverPhone, index + 1)
+        }
+        // Update truck status to LOADING if EMPTY
+        truckDao.updateTruckStatus(truckId, "LOADING")
+    }
+
+    suspend fun updateCargoSequence(id: Long, sequenceOrder: Int) {
+        cargoDao.updateCargoSequence(id, sequenceOrder)
+    }
+
+    suspend fun updateCargoList(cargos: List<CargoEntity>) {
+        cargoDao.updateCargoList(cargos)
     }
 
     suspend fun deleteCargo(cargo: CargoEntity) = cargoDao.deleteCargo(cargo)
 
     // Trucks & Drivers
     val allTrucks: Flow<List<TruckEntity>> = truckDao.getAllTrucks()
+
+    fun searchTrucks(query: String): Flow<List<TruckEntity>> = truckDao.searchTrucks(query)
 
     suspend fun registerTruck(truck: TruckEntity): Long = truckDao.insertTruck(truck)
 

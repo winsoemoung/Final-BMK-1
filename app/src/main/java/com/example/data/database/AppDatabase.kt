@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
         CompensationEntity::class,
         WorkerLaborEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -43,7 +43,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "bmk_express_database_v3"
+                    "bmk_express_database_v4"
                 )
                     .addCallback(DatabaseCallback())
                     .fallbackToDestructiveMigration()

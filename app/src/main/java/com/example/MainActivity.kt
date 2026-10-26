@@ -35,6 +35,7 @@ sealed class BmkTabScreen(
     object Car : BmkTabScreen("car", "ကားစရိတ်", "Car", Icons.Filled.LocalShipping, Icons.Outlined.LocalShipping)
     object Kalay : BmkTabScreen("kalay", "ကလေးဂိတ်", "Kalay", Icons.Filled.LocationOn, Icons.Outlined.LocationOn)
     object Workers : BmkTabScreen("workers", "အလုပ်သမား", "Workers", Icons.Filled.Engineering, Icons.Outlined.Engineering)
+    object History : BmkTabScreen("history", "မှတ်တမ်း", "History", Icons.Filled.History, Icons.Outlined.History)
     object Settings : BmkTabScreen("settings", "ဆက်တင်", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)
 }
 
@@ -68,6 +69,7 @@ fun BmkAppMain(viewModel: BmkViewModel = viewModel()) {
         BmkTabScreen.Car,
         BmkTabScreen.Kalay,
         BmkTabScreen.Workers,
+        BmkTabScreen.History,
         BmkTabScreen.Settings
     )
 
@@ -90,7 +92,7 @@ fun BmkAppMain(viewModel: BmkViewModel = viewModel()) {
                         label = {
                             Text(
                                 text = labelText,
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                             )
                         },
@@ -123,6 +125,7 @@ fun BmkAppMain(viewModel: BmkViewModel = viewModel()) {
                 BmkTabScreen.Car.route -> CarTabScreen(viewModel = viewModel)
                 BmkTabScreen.Kalay.route -> KalaymyoTabScreen(viewModel = viewModel)
                 BmkTabScreen.Workers.route -> WorkersTabScreen(viewModel = viewModel)
+                BmkTabScreen.History.route -> HistoryTabScreen(viewModel = viewModel)
                 BmkTabScreen.Settings.route -> SettingsTabScreen(viewModel = viewModel)
             }
         }

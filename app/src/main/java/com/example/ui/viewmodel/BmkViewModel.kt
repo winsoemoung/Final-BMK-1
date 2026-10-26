@@ -92,6 +92,22 @@ class BmkViewModel(application: Application) : AndroidViewModel(application) {
         initialValue = emptyList()
     )
 
+    private val _truckSearchQuery = MutableStateFlow("")
+    val truckSearchQuery: StateFlow<String> = _truckSearchQuery.asStateFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val truckSearchResults: StateFlow<List<TruckEntity>> = _truckSearchQuery.flatMapLatest { query ->
+        if (query.isBlank()) {
+            repository.allTrucks
+        } else {
+            repository.searchTrucks(query)
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     private val _selectedCargo = MutableStateFlow<CargoEntity?>(null)
     val selectedCargo: StateFlow<CargoEntity?> = _selectedCargo.asStateFlow()
 
@@ -115,6 +131,10 @@ class BmkViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun setTruckSearchQuery(query: String) {
+        _truckSearchQuery.value = query
     }
 
     fun selectCargo(cargo: CargoEntity?) {
@@ -162,11 +182,10 @@ class BmkViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val trackingNo = generateTrackingNumber()
 
-            // Calculate total Viss depending on unit type
             val totalWeightViss = when (weightUnit) {
                 "ကီလို" -> convertKgToViss(unitWeight * quantity)
                 "ပိဿာ" -> unitWeight * quantity
-                else -> unitWeight * quantity // If weight per item is given in Viss
+                else -> unitWeight * quantity
             }
             val totalWeightKg = convertVissToKg(totalWeightViss)
 
@@ -207,14 +226,54 @@ class BmkViewModel(application: Application) : AndroidViewModel(application) {
                 paymentStatus = paymentStatus,
                 status = if (assignedTruck != null) "LOADING_12WHEELER" else "MANDALAY_RECEIVED",
                 truckId = assignedTruck?.id,
-                truckNumber = assignedTruck?.truckNumber ?: "MDY 7D-1212 (12-Wheeler)",
-                driverName = assignedTruck?.driverName ?: "ဦးကိုကို (09-45001122)",
-                driverPhone = assignedTruck?.driverPhone ?: "0945001122",
+                truckNumber = assignedTruck?.truckNumber ?: "",
+                driverName = assignedTruck?.driverName ?: "",
+                driverPhone = assignedTruck?.driverPhone ?: "",
                 remarks = remarks
             )
 
             repository.registerCargo(cargo)
             onSuccess(trackingNo)
+        }
+    }
+
+    // Bulk Assign Selected Cargos to a Truck
+    fun assignSelectedCargosToTruck(
+        cargoIds: List<Long>,
+        truck: TruckEntity,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            repository.assignTruckToCargoes(
+                cargoIds = cargoIds,
+                truckId = truck.id,
+                truckNumber = truck.truckNumber,
+                driverName = truck.driverName,
+                driverPhone = truck.driverPhone
+            )
+            onSuccess()
+        }
+    }
+
+    // Reorder Cargo Items on Truck
+    fun swapCargoSequenceOnTruck(cargosList: List<CargoEntity>, fromIndex: Int, toIndex: Int) {
+        if (fromIndex < 0 || toIndex < 0 || fromIndex >= cargosList.size || toIndex >= cargosList.size) return
+        viewModelScope.launch {
+            val mutable = cargosList.toMutableList()
+            val item1 = mutable[fromIndex]
+            val item2 = mutable[toIndex]
+
+            val updated1 = item1.copy(sequenceOrder = toIndex + 1)
+            val updated2 = item2.copy(sequenceOrder = fromIndex + 1)
+
+            mutable[fromIndex] = updated2
+            mutable[toIndex] = updated1
+
+            // Assign updated sequence numbers to all items
+            val reorderedList = mutable.mapIndexed { index, cargo ->
+                cargo.copy(sequenceOrder = index + 1)
+            }
+            repository.updateCargoList(reorderedList)
         }
     }
 
@@ -230,42 +289,33 @@ class BmkViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Assign Truck to Cargo
-    fun assignTruckToCargo(cargoId: Long, truck: TruckEntity) {
-        viewModelScope.launch {
-            repository.assignTruck(
-                cargoId = cargoId,
-                truckId = truck.id,
-                truckNumber = truck.truckNumber,
-                driverName = truck.driverName,
-                driverPhone = truck.driverPhone
-            )
-        }
-    }
-
     // Car Tab Action: Register 12-Wheeler Truck
     fun registerTruck(
         truckNumber: String,
+        ownerName: String,
         driverName: String,
         driverPhone: String,
         mandalayToKalayFreightPrice: Double,
+        advancePayment: Double,
         dispatchDate: String,
         notes: String,
-        onSuccess: () -> Unit
+        onSuccess: (TruckEntity) -> Unit
     ) {
         viewModelScope.launch {
             val truck = TruckEntity(
                 truckNumber = truckNumber,
+                ownerName = ownerName,
                 driverName = driverName,
                 driverPhone = driverPhone,
                 truckType = "12-Wheeler Box Truck",
                 mandalayToKalayFreightPrice = mandalayToKalayFreightPrice,
+                advancePayment = advancePayment,
                 dispatchDate = dispatchDate,
-                status = "LOADING",
+                status = "EMPTY",
                 notes = notes
             )
-            repository.registerTruck(truck)
-            onSuccess()
+            val insertedId = repository.registerTruck(truck)
+            onSuccess(truck.copy(id = insertedId))
         }
     }
 

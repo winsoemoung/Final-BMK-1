@@ -61,9 +61,10 @@ data class CargoEntity(
     
     // 9. Car Tab မှ Car တစ်စီး ရွေးချယ်မှု
     val truckId: Long? = null,
-    val truckNumber: String = "MDY 7D-1212 (12-Wheeler)",
-    val driverName: String = "ဦးကိုကို (09-45001122)",
-    val driverPhone: String = "0945001122",
+    val truckNumber: String = "",
+    val driverName: String = "",
+    val driverPhone: String = "",
+    val sequenceOrder: Int = 0, // Position on the truck (1..N)
     
     val createdTimestamp: Long = System.currentTimeMillis(),
     val remarks: String = ""
@@ -74,12 +75,14 @@ data class TruckEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val truckNumber: String,
-    val driverName: String,
+    val ownerName: String = "", // ကားပိုင်ရှင် အမည်
+    val driverName: String, // ကားသမား / ယာဉ်မောင်း အမည်
     val driverPhone: String,
     val truckType: String = "12-Wheeler Box Truck",
-    val mandalayToKalayFreightPrice: Double = 1500000.0,
+    val mandalayToKalayFreightPrice: Double = 1500000.0, // ကားခ
+    val advancePayment: Double = 0.0, // ကြိုထုတ်ငွေ
     val dispatchDate: String,
-    val status: String = "LOADING", // "LOADING", "IN_TRANSIT", "KALAY_ARRIVED", "COMPLETED"
+    val status: String = "EMPTY", // "EMPTY", "LOADING", "IN_TRANSIT", "KALAY_ARRIVED", "COMPLETED"
     val totalVissLoaded: Double = 0.0,
     val totalCargosCount: Int = 0,
     val notes: String = ""
