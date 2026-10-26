@@ -1,0 +1,6 @@
+{
+  "name": "BMK EXPRESS Car Gate",
+  "description": "Logistics, cargo tracking, freight entry, and truck rentals for Mandalay - Kalay express route.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
