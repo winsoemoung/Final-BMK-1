@@ -260,10 +260,11 @@ fun AiAssistantDialog(
                                                     onDismiss()
                                                     Toast.makeText(context, "ကုန်လက်ခံလွှာတွင် အလိုအလျောက် ဖြည့်သွင်းပြီးပါပြီ", Toast.LENGTH_SHORT).show()
                                                 },
-                                                colors = ButtonDefaults.buttonColors(containerColor = BmkNavy),
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
+                                                shape = RoundedCornerShape(8.dp),
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
-                                                Text("ကုန်လက်ခံလွှာတွင် အလိုအလျောက် ဖြည့်သွင်းမည်", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                                Text("ကုန်လက်ခံလွှာတွင် အလိုအလျောက် ဖြည့်သွင်းမည်", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                             }
                                         }
                                     }
@@ -309,12 +310,13 @@ fun AiAssistantDialog(
                                         totalAmount = 201000.0
                                     )
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = BmkNavy),
-                                modifier = Modifier.fillMaxWidth()
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6F3CD7)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth().testTag("generate_viber_receipt_btn")
                             ) {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("နမူနာ Viber ဘောက်ချာ စာသား ဖန်တီးမည်", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("နမူနာ Viber ဘောက်ချာ စာသား ဖန်တီးမည်", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
 
                             when (val state = uiState) {
@@ -349,11 +351,12 @@ fun AiAssistantDialog(
                                                     Toast.makeText(context, "ဘောက်ချာ စာသား ကူးယူပြီးပါပြီ (Copied)", Toast.LENGTH_SHORT).show()
                                                 },
                                                 colors = ButtonDefaults.buttonColors(containerColor = BmkOrange),
+                                                shape = RoundedCornerShape(8.dp),
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
-                                                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
+                                                Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
                                                 Spacer(modifier = Modifier.width(4.dp))
-                                                Text("စာသား ကူးယူမည် (Copy Text)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                Text("စာသား ကူးယူမည် (Copy Text)", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                             }
                                         }
                                     }
