@@ -28,6 +28,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.model.CargoEntity
 import com.example.data.model.TruckEntity
 import com.example.ui.components.AiAssistantDialog
+import com.example.ui.components.CargoPrintDialog
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.AiLogisticsViewModel
 import com.example.ui.viewmodel.BmkViewModel
@@ -51,6 +52,7 @@ fun CarTabScreen(
     var showAiDialog by remember { mutableStateOf(false) }
     var showAddTruckDialog by remember { mutableStateOf(false) }
     var selectedTruckDetails by remember { mutableStateOf<TruckEntity?>(null) }
+    var truckToPrint by remember { mutableStateOf<TruckEntity?>(null) }
 
     // Form fields for Add Car
     var truckNumber by remember { mutableStateOf("3N-776445 (12-Wheeler)") }
@@ -265,12 +267,13 @@ fun CarTabScreen(
                             "IN_TRANSIT" to "စထွက်သွား",
                             "KALAY_ARRIVED" to "ကလေးရောက် ကုန်ချပြီး"
                         ).forEach { (code, label) ->
+                            val isSelected = truck.status == code
                             FilterChip(
-                                selected = truck.status == code,
+                                selected = isSelected,
                                 onClick = { viewModel.updateTruckStatus(truck.id, code) },
-                                label = { Text(label, fontSize = 9.sp, fontWeight = FontWeight.Bold) },
+                                label = { Text(label, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (isSelected) Color.White else TextPrimary) },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = BmkNavy,
+                                    selectedContainerColor = Color(0xFF1E3A8A),
                                     selectedLabelColor = Color.White,
                                     containerColor = SurfaceLight,
                                     labelColor = TextPrimary
@@ -286,18 +289,43 @@ fun CarTabScreen(
                         val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${truck.driverPhone}"))
                         context.startActivity(intent)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = BmkNavy)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(Icons.Default.Call, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("ကားသမား ဖုန်းခေါ်မည်")
+                    Icon(Icons.Default.Call, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("ကားသမား ဖုန်းခေါ်မည်", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { selectedTruckDetails = null }) {
-                    Text("ပိတ်မည်", fontWeight = FontWeight.Bold, color = TextSecondary)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            truckToPrint = truck
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BmkOrange)
+                    ) {
+                        Icon(Icons.Default.Print, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("ယာဉ်တင်စာရင်း Print ထုတ်မည်", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                    TextButton(onClick = { selectedTruckDetails = null }) {
+                        Text("ပိတ်မည်", fontWeight = FontWeight.Bold, color = TextSecondary)
+                    }
                 }
             }
+        )
+    }
+
+    // Truck Manifest Print Dialog
+    truckToPrint?.let { truck ->
+        val cargosOnTruck = allCargo.filter { it.truckId == truck.id }
+        CargoPrintDialog(
+            cargo = null,
+            truck = truck,
+            cargosOnTruck = cargosOnTruck,
+            viewModel = viewModel,
+            onDismiss = { truckToPrint = null }
         )
     }
 

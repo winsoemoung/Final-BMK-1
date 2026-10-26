@@ -61,3 +61,8 @@ val StatusRedText = Color(0xFFB91C1C)
 val BulkPurpleBg = Color(0xFFF3E8FF)
 val BulkPurpleText = Color(0xFF6B21A8)
 val BulkPurpleBright = Color(0xFF7C3AED)
+
+// Alert and Status colors
+val SuccessGreen = Color(0xFF059669)
+val ErrorRed = Color(0xFFDC2626)
+

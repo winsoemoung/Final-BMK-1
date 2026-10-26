@@ -52,6 +52,12 @@ interface CargoDao {
 
     @Query("SELECT SUM(totalAmount) FROM cargo_shipments")
     fun getTotalRevenue(): Flow<Double?>
+
+    @Query("SELECT * FROM cargo_shipments ORDER BY id ASC")
+    suspend fun getAllCargosList(): List<CargoEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCargos(cargos: List<CargoEntity>)
 }
 
 @Dao
@@ -70,6 +76,12 @@ interface TruckDao {
 
     @Query("UPDATE truck_drivers SET totalVissLoaded = :viss, totalCargosCount = :count WHERE id = :id")
     suspend fun updateTruckTotals(id: Long, viss: Double, count: Int)
+
+    @Query("SELECT * FROM truck_drivers ORDER BY id ASC")
+    suspend fun getAllTrucksList(): List<TruckEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTrucks(trucks: List<TruckEntity>)
 }
 
 @Dao
@@ -82,6 +94,12 @@ interface CompensationDao {
 
     @Query("UPDATE compensation_claims SET status = :status, paidAmount = :paidAmount WHERE id = :id")
     suspend fun updateClaimStatus(id: Long, status: String, paidAmount: Double)
+
+    @Query("SELECT * FROM compensation_claims ORDER BY id ASC")
+    suspend fun getAllClaimsList(): List<CompensationEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertClaims(claims: List<CompensationEntity>)
 }
 
 @Dao
@@ -94,4 +112,68 @@ interface WorkerLaborDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLaborRecord(record: WorkerLaborEntity): Long
+
+    @Query("SELECT * FROM worker_labor_records ORDER BY id ASC")
+    suspend fun getAllLaborRecordsList(): List<WorkerLaborEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLaborRecords(records: List<WorkerLaborEntity>)
 }
+
+@Dao
+interface PrintTemplateDao {
+    @Query("SELECT * FROM print_templates ORDER BY id ASC")
+    fun getAllTemplates(): Flow<List<com.example.data.model.PrintTemplateEntity>>
+
+    @Query("SELECT * FROM print_templates ORDER BY id ASC")
+    suspend fun getAllTemplatesList(): List<com.example.data.model.PrintTemplateEntity>
+
+    @Query("SELECT * FROM print_templates WHERE id = :id LIMIT 1")
+    fun getTemplateById(id: Int): Flow<com.example.data.model.PrintTemplateEntity?>
+
+    @Query("SELECT * FROM print_templates WHERE id = :id LIMIT 1")
+    suspend fun getTemplateByIdOnce(id: Int): com.example.data.model.PrintTemplateEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTemplate(template: com.example.data.model.PrintTemplateEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTemplates(templates: List<com.example.data.model.PrintTemplateEntity>)
+
+    @Update
+    suspend fun updateTemplate(template: com.example.data.model.PrintTemplateEntity)
+
+    @Query("SELECT COUNT(*) FROM print_templates")
+    suspend fun countTemplates(): Int
+}
+
+@Dao
+interface PrintedVoucherDao {
+    @Query("SELECT * FROM printed_vouchers ORDER BY createdTimestamp DESC")
+    fun getAllPrintedVouchers(): Flow<List<com.example.data.model.PrintedVoucherEntity>>
+
+    @Query("SELECT * FROM printed_vouchers ORDER BY id ASC")
+    suspend fun getAllVouchersList(): List<com.example.data.model.PrintedVoucherEntity>
+
+    @Query("SELECT * FROM printed_vouchers WHERE voucherNumber = :voucherNumber LIMIT 1")
+    fun getVoucherByNumber(voucherNumber: String): Flow<com.example.data.model.PrintedVoucherEntity?>
+
+    @Query("SELECT * FROM printed_vouchers WHERE voucherNumber = :voucherNumber LIMIT 1")
+    suspend fun findVoucherByNumber(voucherNumber: String): com.example.data.model.PrintedVoucherEntity?
+
+    @Query("SELECT * FROM printed_vouchers WHERE voucherNumber LIKE '%' || :query || '%' OR customerName LIKE '%' || :query || '%' OR customerPhone LIKE '%' || :query || '%' OR carNumber LIKE '%' || :query || '%' ORDER BY createdTimestamp DESC")
+    fun searchVouchers(query: String): Flow<List<com.example.data.model.PrintedVoucherEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertVoucher(voucher: com.example.data.model.PrintedVoucherEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertVouchers(vouchers: List<com.example.data.model.PrintedVoucherEntity>)
+
+    @Delete
+    suspend fun deleteVoucher(voucher: com.example.data.model.PrintedVoucherEntity)
+
+    @Query("SELECT * FROM printed_vouchers ORDER BY id DESC LIMIT 1")
+    suspend fun getLatestVoucher(): com.example.data.model.PrintedVoucherEntity?
+}
+

@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.database.AppDatabase
 import com.example.data.model.CargoEntity
 import com.example.data.model.CompensationEntity
+import com.example.data.model.PrintTemplateEntity
+import com.example.data.model.PrintedVoucherEntity
 import com.example.data.model.TruckEntity
 import com.example.data.model.WorkerLaborEntity
 import com.example.data.repository.BmkRepository
@@ -36,7 +38,9 @@ class BmkViewModel(application: Application) : AndroidViewModel(application) {
             database.cargoDao(),
             database.truckDao(),
             database.compensationDao(),
-            database.workerLaborDao()
+            database.workerLaborDao(),
+            database.printTemplateDao(),
+            database.printedVoucherDao()
         )
     }
 
@@ -389,4 +393,126 @@ class BmkViewModel(application: Application) : AndroidViewModel(application) {
             onSuccess()
         }
     }
+
+    // ==========================================
+    // Print Templates (7 Customizable Templates)
+    // ==========================================
+    val allTemplates: StateFlow<List<PrintTemplateEntity>> = repository.allTemplates.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    private val _selectedTemplateId = MutableStateFlow(1)
+    val selectedTemplateId: StateFlow<Int> = _selectedTemplateId.asStateFlow()
+
+    fun selectTemplate(id: Int) {
+        _selectedTemplateId.value = id
+    }
+
+    fun updatePrintTemplate(template: PrintTemplateEntity, onDone: () -> Unit = {}) {
+        viewModelScope.launch {
+            repository.updateTemplate(template)
+            onDone()
+        }
+    }
+
+    // ==========================================
+    // Printed Vouchers & Exact Search by Voucher No
+    // ==========================================
+    val allPrintedVouchers: StateFlow<List<PrintedVoucherEntity>> = repository.allPrintedVouchers.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    private val _voucherSearchQuery = MutableStateFlow("")
+    val voucherSearchQuery: StateFlow<String> = _voucherSearchQuery.asStateFlow()
+
+    fun setVoucherSearchQuery(query: String) {
+        _voucherSearchQuery.value = query
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val voucherSearchResults: StateFlow<List<PrintedVoucherEntity>> = _voucherSearchQuery.flatMapLatest { query ->
+        if (query.isBlank()) {
+            repository.allPrintedVouchers
+        } else {
+            repository.searchVouchers(query)
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    private val _selectedVoucherForView = MutableStateFlow<PrintedVoucherEntity?>(null)
+    val selectedVoucherForView: StateFlow<PrintedVoucherEntity?> = _selectedVoucherForView.asStateFlow()
+
+    fun selectVoucherForView(voucher: PrintedVoucherEntity?) {
+        _selectedVoucherForView.value = voucher
+    }
+
+    suspend fun findVoucherDirectly(voucherNumber: String): PrintedVoucherEntity? {
+        return repository.findVoucherByNumber(voucherNumber.trim())
+    }
+
+    fun savePrintedVoucher(
+        voucherNumber: String,
+        templateId: Int,
+        templateName: String,
+        paperWidthMm: Int,
+        cargoId: Long? = null,
+        truckId: Long? = null,
+        customerName: String,
+        customerPhone: String,
+        customerAddress: String,
+        carNumber: String,
+        driverName: String,
+        itemDescription: String,
+        quantity: Int,
+        weightViss: Double,
+        freightFee: Double,
+        laborFee: Double,
+        totalAmount: Double,
+        paymentStatus: String,
+        remarks: String = "",
+        onSaved: (PrintedVoucherEntity) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+            val entity = PrintedVoucherEntity(
+                voucherNumber = voucherNumber,
+                issueDate = dateStr,
+                templateId = templateId,
+                templateName = templateName,
+                paperWidthMm = paperWidthMm,
+                cargoId = cargoId,
+                truckId = truckId,
+                customerName = customerName,
+                customerPhone = customerPhone,
+                customerAddress = customerAddress,
+                carNumber = carNumber,
+                driverName = driverName,
+                itemDescription = itemDescription,
+                quantity = quantity,
+                weightViss = weightViss,
+                freightFee = freightFee,
+                laborFee = laborFee,
+                totalAmount = totalAmount,
+                paymentStatus = paymentStatus,
+                remarks = remarks
+            )
+            repository.savePrintedVoucher(entity)
+            _selectedVoucherForView.value = entity
+            onSaved(entity)
+        }
+    }
+
+    // Helper to generate a sequential or formatted voucher number
+    fun generateNextVoucherNumber(): String {
+        val rand = (1000..9999).random()
+        return String.format(java.util.Locale.US, "%04d", rand)
+    }
 }
+

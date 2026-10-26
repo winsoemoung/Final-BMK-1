@@ -30,6 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.model.CargoEntity
 import com.example.data.model.TruckEntity
 import com.example.ui.components.AiAssistantDialog
+import com.example.ui.components.CargoPrintDialog
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.AiLogisticsViewModel
 import com.example.ui.viewmodel.BmkViewModel
@@ -51,6 +52,7 @@ fun MandalayTabScreen(
     var showAiDialog by remember { mutableStateOf(false) }
     var showIntakeForm by remember { mutableStateOf(false) }
     var selectedCargoDetails by remember { mutableStateOf<CargoEntity?>(null) }
+    var cargoToPrint by remember { mutableStateOf<CargoEntity?>(null) }
     var selectedTruckForList by remember { mutableStateOf<TruckEntity?>(null) }
 
     // AA vs BB View Modes: 0 = (AA) Customer/Shop List, 1 = (BB) Detailed All Cargos List
@@ -131,34 +133,12 @@ fun MandalayTabScreen(
             Column(modifier = Modifier.background(DarkBackground)) {
                 TopAppBar(
                     title = {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "BMK EXPRESS",
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 17.sp,
-                                    color = Color.White
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Surface(
-                                    color = BmkOrangeBright,
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Text(
-                                        text = "၁၂ ဘီး ဂိတ်",
-                                        color = Color.Black,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 10.sp,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-                            Text(
-                                text = "မန္တလေး (၈၄ လမ်း) ⇌ ကလေးမြို့ အမြန်ကုန်စည်",
-                                fontSize = 11.sp,
-                                color = TextMutedDark
-                            )
-                        }
+                        Text(
+                            text = "BMK EXPRESS",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 18.sp,
+                            color = Color.White
+                        )
                     },
                     actions = {
                         // + ဘောင်ချာဖွင့် Button
@@ -166,38 +146,17 @@ fun MandalayTabScreen(
                             onClick = { showIntakeForm = true },
                             colors = ButtonDefaults.buttonColors(containerColor = BmkOrangeBright),
                             shape = RoundedCornerShape(16.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                             modifier = Modifier.testTag("top_action_open_voucher")
                         ) {
-                            Text("+ ဘောင်ချာဖွင့်", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                        }
-                        Spacer(modifier = Modifier.width(4.dp))
-                        // Gemini AI Button
-                        OutlinedButton(
-                            onClick = { showAiDialog = true },
-                            shape = RoundedCornerShape(16.dp),
-                            border = BorderStroke(1.dp, BmkOrangeBright.copy(alpha = 0.6f)),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            modifier = Modifier.testTag("action_open_ai")
-                        ) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = BmkOrangeBright, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Gemini AI", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text("+ ဘောင်ချာဖွင့်", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
                 )
             }
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showAiDialog = true },
-                containerColor = BmkOrange,
-                contentColor = Color.White,
-                icon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White) },
-                text = { Text("BMK AI လက်ထောက်", fontWeight = FontWeight.Bold, fontSize = 13.sp) },
-                modifier = Modifier.testTag("fab_ai_assistant")
-            )
         }
     ) { padding ->
         Column(
@@ -209,29 +168,38 @@ fun MandalayTabScreen(
             // View Mode Selector Bar [ (AA) By Customer/Shop | (BB) All Cargos List ]
             Surface(
                 color = CardBackground,
-                shadowElevation = 2.dp,
+                shadowElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .background(Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     viewModes.forEachIndexed { index, modeTitle ->
-                        FilterChip(
-                            selected = viewMode == index,
+                        val isSelected = viewMode == index
+                        Surface(
                             onClick = { viewMode = index },
-                            label = { Text(modeTitle, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = BmkNavy,
-                                selectedLabelColor = Color.White,
-                                containerColor = SurfaceLight,
-                                labelColor = TextPrimary
-                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) Color(0xFF1E3A8A) else Color.Transparent,
+                            shadowElevation = if (isSelected) 2.dp else 0.dp,
                             modifier = Modifier.weight(1f)
-                        )
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp)
+                            ) {
+                                Text(
+                                    text = modeTitle,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                    color = if (isSelected) Color.White else TextPrimary
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -252,20 +220,35 @@ fun MandalayTabScreen(
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(
-                        selected = isSelectionMode,
+                    Surface(
                         onClick = {
                             isSelectionMode = !isSelectionMode
                             if (!isSelectionMode) selectedCargoIds.clear()
                         },
-                        label = { Text(if (isSelectionMode) "Select ပိတ်မည်" else "ကားပေါ်တင်ရန် Select မှတ်မည်", fontSize = 10.sp, fontWeight = FontWeight.Bold) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = BmkOrange,
-                            selectedLabelColor = Color.White,
-                            containerColor = SurfaceLight,
-                            labelColor = TextPrimary
-                        )
-                    )
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSelectionMode) BmkOrange else Color.White,
+                        border = BorderStroke(1.dp, if (isSelectionMode) BmkOrangeDark else CardBorderColor),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp)
+                        ) {
+                            Icon(
+                                if (isSelectionMode) Icons.Default.Close else Icons.Default.Checklist,
+                                contentDescription = null,
+                                tint = if (isSelectionMode) Color.White else BmkNavy,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                if (isSelectionMode) "Select ပိတ်မည်" else "ကားပေါ်တင်ရန် Select",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelectionMode) Color.White else TextPrimary
+                            )
+                        }
+                    }
 
                     if (isSelectionMode && selectedCargoIds.isNotEmpty()) {
                         Button(
@@ -817,35 +800,103 @@ fun MandalayTabScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("• ကုန်ပစ္စည်း အမည်: ${cargo.cargoName.ifBlank { cargo.itemDescription }}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
                     Text("• အရေအတွက် & ယူနစ်: ${cargo.quantity} ${cargo.weightUnit}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text("• အလေးချိန်: ${cargo.weightViss} ပိဿာ / ${String.format("%.1f", cargo.weightKg)} Kg", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BmkNavy)
+                    Text("• အလေးချိန်: ${cargo.weightViss} ပိဿာ / ${String.format(java.util.Locale.US, "%.1f", cargo.weightKg)} Kg", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF1E3A8A))
                     Divider(color = CardBorderColor)
-                    Text("• ပို့သူ: ${cargo.senderName} (${cargo.senderPhone})", fontSize = 12.sp, color = TextPrimary)
-                    if (cargo.senderAddress.isNotBlank()) Text("  မန္တလေး လိပ်စာ: ${cargo.senderAddress}", fontSize = 11.sp, color = TextSecondary)
-                    Text("• ကလေးမြို့ လက်ခံသူ: ${cargo.receiverName} (${cargo.receiverPhone})", fontSize = 12.sp, color = TextPrimary)
-                    Text("  ကလေးမြို့ ဆိုင်လိပ်စာ: ${cargo.receiverShopAddress}", fontSize = 11.sp, color = TextSecondary)
+
+                    // Sender Info with Direct Call Button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("• ပို့သူ: ${cargo.senderName} (${cargo.senderPhone})", fontSize = 12.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
+                            if (cargo.senderAddress.isNotBlank()) Text("  မန္တလေး လိပ်စာ: ${cargo.senderAddress}", fontSize = 11.sp, color = TextSecondary)
+                        }
+                        if (cargo.senderPhone.isNotBlank()) {
+                            IconButton(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${cargo.senderPhone}"))
+                                    context.startActivity(intent)
+                                },
+                                modifier = Modifier.size(32.dp).background(Color(0xFFECFDF5), RoundedCornerShape(16.dp))
+                            ) {
+                                Icon(Icons.Default.Call, contentDescription = "Call Sender", tint = Color(0xFF059669), modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+
+                    // Receiver Info with Direct Call Button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("• ကလေးမြို့ လက်ခံသူ: ${cargo.receiverName} (${cargo.receiverPhone})", fontSize = 12.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
+                            Text("  ကလေးမြို့ ဆိုင်လိပ်စာ: ${cargo.receiverShopAddress}", fontSize = 11.sp, color = TextSecondary)
+                        }
+                        if (cargo.receiverPhone.isNotBlank()) {
+                            IconButton(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${cargo.receiverPhone}"))
+                                    context.startActivity(intent)
+                                },
+                                modifier = Modifier.size(32.dp).background(Color(0xFFEFF6FF), RoundedCornerShape(16.dp))
+                            ) {
+                                Icon(Icons.Default.Call, contentDescription = "Call Receiver", tint = Color(0xFF2563EB), modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+
                     Divider(color = CardBorderColor)
-                    if (cargo.truckNumber.isNotBlank()) Text("• သတ်မှတ် ၁၂ ဘီး ကား: ${cargo.truckNumber}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BmkNavy)
+                    if (cargo.truckNumber.isNotBlank()) Text("• သတ်မှတ် ၁၂ ဘီး ကား: ${cargo.truckNumber}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E3A8A))
                     Text("• စုစုပေါင်း ကျသင့်ငွေ: ${currencyFormat.format(cargo.totalAmount)} ကျပ် (${cargo.paymentStatus})", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = BmkOrange)
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${cargo.senderPhone}"))
+                        val targetPhone = cargo.receiverPhone.ifBlank { cargo.senderPhone }
+                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$targetPhone"))
                         context.startActivity(intent)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = BmkNavy)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(Icons.Default.Call, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("ဖုန်းခေါ်မည်")
+                    Icon(Icons.Default.Call, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("ဖုန်းခေါ်မည်", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { selectedCargoDetails = null }) {
-                    Text("ပိတ်မည်", fontWeight = FontWeight.Bold, color = TextSecondary)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            cargoToPrint = cargo
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BmkOrange),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Print, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Print ထုတ်မည်", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                    TextButton(onClick = { selectedCargoDetails = null }) {
+                        Text("ပိတ်မည်", fontWeight = FontWeight.Bold, color = TextSecondary)
+                    }
                 }
             }
+        )
+    }
+
+    // Cargo Print Dialog
+    cargoToPrint?.let { cargo ->
+        CargoPrintDialog(
+            cargo = cargo,
+            truck = null,
+            viewModel = viewModel,
+            onDismiss = { cargoToPrint = null }
         )
     }
 
@@ -875,28 +926,80 @@ fun MandalayTabScreen(
 
                     // 1. ကုန်မာ / ကုန်ပွ
                     item {
-                        Text("၁။ ကုန်အမျိုးအစား:", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BmkNavy)
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("၁။ ကုန်အမျိုးအစား ရွေးချယ်ရန်:", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
+                        Spacer(modifier = Modifier.height(6.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Button(
+                            val isHeavy = cargoDensityType == "HEAVY"
+                            Surface(
                                 onClick = { cargoDensityType = "HEAVY" },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (cargoDensityType == "HEAVY") BmkNavy else SurfaceLight,
-                                    contentColor = if (cargoDensityType == "HEAVY") Color.White else TextPrimary
-                                ),
-                                border = BorderStroke(1.dp, if (cargoDensityType == "HEAVY") BmkNavy else Color(0xFFCBD5E1)),
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isHeavy) Color(0xFF1E3A8A) else Color(0xFFF8FAFC),
+                                border = BorderStroke(1.5.dp, if (isHeavy) Color(0xFF1E3A8A) else Color(0xFFCBD5E1)),
+                                shadowElevation = if (isHeavy) 2.dp else 0.dp,
                                 modifier = Modifier.weight(1f)
-                            ) { Text("ကုန်မာ (Heavy)", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Layers,
+                                        contentDescription = null,
+                                        tint = if (isHeavy) Color.White else Color(0xFF1E3A8A),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = "ကုန်မာ (Heavy)",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = if (isHeavy) Color.White else TextPrimary
+                                        )
+                                        Text(
+                                            text = "အလေးချိန်စီးသော ပစ္စည်း",
+                                            fontSize = 10.sp,
+                                            color = if (isHeavy) Color.White.copy(alpha = 0.9f) else TextSecondary
+                                        )
+                                    }
+                                }
+                            }
 
-                            Button(
+                            val isBulk = cargoDensityType == "BULK"
+                            Surface(
                                 onClick = { cargoDensityType = "BULK" },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (cargoDensityType == "BULK") BulkPurpleBright else SurfaceLight,
-                                    contentColor = if (cargoDensityType == "BULK") Color.White else TextPrimary
-                                ),
-                                border = BorderStroke(1.dp, if (cargoDensityType == "BULK") BulkPurpleBright else Color(0xFFCBD5E1)),
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isBulk) Color(0xFF7C3AED) else Color(0xFFF8FAFC),
+                                border = BorderStroke(1.5.dp, if (isBulk) Color(0xFF7C3AED) else Color(0xFFCBD5E1)),
+                                shadowElevation = if (isBulk) 2.dp else 0.dp,
                                 modifier = Modifier.weight(1f)
-                            ) { Text("ကုန်ပွ (Bulk)", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Inventory2,
+                                        contentDescription = null,
+                                        tint = if (isBulk) Color.White else Color(0xFF7C3AED),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = "ကုန်ပွ (Bulk)",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = if (isBulk) Color.White else TextPrimary
+                                        )
+                                        Text(
+                                            text = "နေရာယူသော ကုန်ပွ",
+                                            fontSize = 10.sp,
+                                            color = if (isBulk) Color.White.copy(alpha = 0.9f) else TextSecondary
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -933,23 +1036,41 @@ fun MandalayTabScreen(
                                 Row(
                                     modifier = Modifier
                                         .weight(1.2f)
-                                        .background(SurfaceLight, RoundedCornerShape(8.dp))
+                                        .background(Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
                                         .padding(2.dp)
                                 ) {
-                                    FilterChip(
-                                        selected = weightTypeUnit == "ပိဿာ",
+                                    val isViss = weightTypeUnit == "ပိဿာ"
+                                    Surface(
                                         onClick = { weightTypeUnit = "ပိဿာ" },
-                                        label = { Text("ပိဿာ", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BmkNavy, selectedLabelColor = Color.White),
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = if (isViss) Color(0xFF1E3A8A) else Color.Transparent,
                                         modifier = Modifier.weight(1f)
-                                    )
-                                    FilterChip(
-                                        selected = weightTypeUnit == "Kg",
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 8.dp)) {
+                                            Text(
+                                                "ပိဿာ",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isViss) Color.White else TextPrimary
+                                            )
+                                        }
+                                    }
+                                    val isKg = weightTypeUnit == "Kg"
+                                    Surface(
                                         onClick = { weightTypeUnit = "Kg" },
-                                        label = { Text("Kg", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BmkNavy, selectedLabelColor = Color.White),
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = if (isKg) Color(0xFF1E3A8A) else Color.Transparent,
                                         modifier = Modifier.weight(1f)
-                                    )
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 8.dp)) {
+                                            Text(
+                                                "Kg",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isKg) Color.White else TextPrimary
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1021,10 +1142,10 @@ fun MandalayTabScreen(
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "စုစုပေါင်း = ${String.format("%.2f", totalCalculatedViss)} ပိဿာ (${String.format("%.2f", totalCalculatedKg)} Kg)",
+                                    text = "စုစုပေါင်း = ${String.format(java.util.Locale.US, "%.2f", totalCalculatedViss)} ပိဿာ (${String.format(java.util.Locale.US, "%.2f", totalCalculatedKg)} Kg)",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp,
-                                    color = BmkNavy
+                                    color = Color(0xFF1E3A8A)
                                 )
                             }
                         }
@@ -1178,7 +1299,7 @@ fun MandalayTabScreen(
                         ) {
                             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text("ကျသင့်ငွေ တွက်ချက်မှု ချုပ်:", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BmkNavy)
-                                Text("• တန်ဆာခ (${String.format("%.1f", totalCalculatedViss)} ပိဿာ x ${settingsState.freightRatePerViss.toInt()} ကျပ်) = ${currencyFormat.format(freightFee)} ကျပ်", fontSize = 12.sp, color = TextPrimary)
+                                Text("• တန်ဆာခ (${String.format(java.util.Locale.US, "%.1f", totalCalculatedViss)} ပိဿာ x ${settingsState.freightRatePerViss.toInt()} ကျပ်) = ${currencyFormat.format(freightFee)} ကျပ်", fontSize = 12.sp, color = TextPrimary)
                                 Text("• မန္တလေး ၁၂ ဘီး တင်ခ = ${currencyFormat.format(mdyLoadingFee)} ကျပ်", fontSize = 12.sp, color = TextPrimary)
                                 Text("• ကလေး ၁၂ ဘီး ချခ = ${currencyFormat.format(klyUnloadingFee)} ကျပ်", fontSize = 12.sp, color = TextPrimary)
                                 if (isShuttlePickup) {

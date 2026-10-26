@@ -246,18 +246,20 @@ fun WorkersTabScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("ဂိတ် ရွေးချယ်ပါ:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val isMdy = selectedWageTab == 0
                         FilterChip(
-                            selected = selectedWageTab == 0,
+                            selected = isMdy,
                             onClick = { selectedWageTab = 0 },
-                            label = { Text("M-wages (မန္တလေး)", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BmkNavy, selectedLabelColor = Color.White),
+                            label = { Text("M-wages (မန္တလေး)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isMdy) Color.White else TextPrimary) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color(0xFF1E3A8A), selectedLabelColor = Color.White),
                             modifier = Modifier.weight(1f)
                         )
+                        val isKly = selectedWageTab == 1
                         FilterChip(
-                            selected = selectedWageTab == 1,
+                            selected = isKly,
                             onClick = { selectedWageTab = 1 },
-                            label = { Text("K-wages (ကလေး)", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BmkNavy, selectedLabelColor = Color.White),
+                            label = { Text("K-wages (ကလေး)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isKly) Color.White else TextPrimary) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Color(0xFF1E3A8A), selectedLabelColor = Color.White),
                             modifier = Modifier.weight(1f)
                         )
                     }

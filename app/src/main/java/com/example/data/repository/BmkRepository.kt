@@ -10,11 +10,18 @@ import com.example.data.model.TruckEntity
 import com.example.data.model.WorkerLaborEntity
 import kotlinx.coroutines.flow.Flow
 
+import com.example.data.dao.PrintTemplateDao
+import com.example.data.dao.PrintedVoucherDao
+import com.example.data.model.PrintTemplateEntity
+import com.example.data.model.PrintedVoucherEntity
+
 class BmkRepository(
     private val cargoDao: CargoDao,
     private val truckDao: TruckDao,
     private val compensationDao: CompensationDao,
-    private val workerLaborDao: WorkerLaborDao
+    private val workerLaborDao: WorkerLaborDao,
+    private val printTemplateDao: PrintTemplateDao,
+    private val printedVoucherDao: PrintedVoucherDao
 ) {
     val allCargo: Flow<List<CargoEntity>> = cargoDao.getAllCargo()
     val cargoCount: Flow<Int> = cargoDao.getCargoCount()
@@ -78,4 +85,29 @@ class BmkRepository(
     fun getLaborByBranch(branch: String): Flow<List<WorkerLaborEntity>> = workerLaborDao.getLaborByBranch(branch)
 
     suspend fun addLaborRecord(record: WorkerLaborEntity): Long = workerLaborDao.insertLaborRecord(record)
+
+    // Print Templates
+    val allTemplates: Flow<List<PrintTemplateEntity>> = printTemplateDao.getAllTemplates()
+
+    fun getTemplateById(id: Int): Flow<PrintTemplateEntity?> = printTemplateDao.getTemplateById(id)
+
+    suspend fun getTemplateByIdOnce(id: Int): PrintTemplateEntity? = printTemplateDao.getTemplateByIdOnce(id)
+
+    suspend fun updateTemplate(template: PrintTemplateEntity) = printTemplateDao.updateTemplate(template)
+
+    suspend fun insertTemplate(template: PrintTemplateEntity) = printTemplateDao.insertTemplate(template)
+
+    // Printed Vouchers & Historical Search
+    val allPrintedVouchers: Flow<List<PrintedVoucherEntity>> = printedVoucherDao.getAllPrintedVouchers()
+
+    fun searchVouchers(query: String): Flow<List<PrintedVoucherEntity>> = printedVoucherDao.searchVouchers(query)
+
+    fun getVoucherByNumber(voucherNumber: String): Flow<PrintedVoucherEntity?> = printedVoucherDao.getVoucherByNumber(voucherNumber)
+
+    suspend fun findVoucherByNumber(voucherNumber: String): PrintedVoucherEntity? = printedVoucherDao.findVoucherByNumber(voucherNumber)
+
+    suspend fun savePrintedVoucher(voucher: PrintedVoucherEntity): Long = printedVoucherDao.insertVoucher(voucher)
+
+    suspend fun deleteVoucher(voucher: PrintedVoucherEntity) = printedVoucherDao.deleteVoucher(voucher)
 }
+

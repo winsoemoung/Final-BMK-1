@@ -236,12 +236,13 @@ fun KalaymyoTabScreen(
                             "KALAY_ARRIVED" to "ကလေးဂိတ်ရောက်",
                             "DELIVERED_TO_SHOP" to "ဆိုင်အရောက်ပို့ပြီး"
                         ).forEach { (code, label) ->
+                            val isSelected = cargo.status == code
                             FilterChip(
-                                selected = cargo.status == code,
+                                selected = isSelected,
                                 onClick = { viewModel.updateCargoStatus(cargo.id, code) },
-                                label = { Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold) },
+                                label = { Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (isSelected) Color.White else TextPrimary) },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = BmkNavy,
+                                    selectedContainerColor = Color(0xFF1E3A8A),
                                     selectedLabelColor = Color.White,
                                     containerColor = SurfaceLight,
                                     labelColor = TextPrimary
@@ -257,11 +258,12 @@ fun KalaymyoTabScreen(
                         val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${cargo.receiverPhone}"))
                         context.startActivity(intent)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = BmkNavy)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(Icons.Default.Call, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("လက်ခံသူ ဖုန်းခေါ်မည်")
+                    Icon(Icons.Default.Call, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("လက်ခံသူ ဖုန်းခေါ်မည်", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {

@@ -117,3 +117,60 @@ data class WorkerLaborEntity(
     val totalLaborPaid: Double = 0.0,
     val notes: String = ""
 )
+
+@Entity(tableName = "print_templates")
+data class PrintTemplateEntity(
+    @PrimaryKey
+    val id: Int, // 1 to 7
+    val templateName: String, // e.g. "ပုံစံ ၁ (နမူနာ ၁ - ၈ ကော်လံ ယာဉ်တင်စာရင်း)"
+    val paperWidthMm: Int = 80, // 58, 80, 100
+    val headerSalutation: String = "ဗုဒ္ဓံ ဓမ္မံ သံဃံ",
+    val gateName: String = "ဘုန်းမောင်ခန့်",
+    val routeTitle: String = "မန္တလေး <=> ကလေး ကုန်စည်ပို့ဆောင်ရေး",
+    val mandalayAddress: String = "စွယ်တော်ကားကွင်း၊ မန္တလေးမြို့",
+    val mandalayPhones: String = "09-987769641, 09-449362369",
+    val kalayAddress: String = "နယ်မြေ(၄)၊ တောင်ဖီလာရပ်ကွက်၊ ကလေးမြို့",
+    val kalayPhones: String = "09-987769642, 09-449362352",
+    val hasTableGrid: Boolean = true,
+    val tableColumns: String = "စဉ်, အမည်, အကြောင်းအရာ, ဦးရေ, နှုန်း, သင့်ငွေကျပ်, လ/သ, မှတ်ချက်",
+    val tableColumnWidths: String = "8, 18, 24, 10, 10, 14, 8, 8",
+    val tableRowCount: Int = 8,
+    val footerNote: String = "အားပေးမှုကို အထူးကျေးဇူးတင်ရှိပါသည်",
+    val showSignatureLine: Boolean = true,
+    val signatureLabel: String = "လက်မှတ်",
+    val voucherNumberPosition: String = "TOP_RIGHT", // "TOP_RIGHT", "BELOW_HEADER", "BOTTOM_LEFT"
+    val showQrBarcode: Boolean = true,
+    val isDefault: Boolean = false
+)
+
+@Entity(
+    tableName = "printed_vouchers",
+    indices = [androidx.room.Index(value = ["voucherNumber"], unique = true)]
+)
+data class PrintedVoucherEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val voucherNumber: String, // e.g. "0100", "0092", "1195"
+    val issueDate: String, // e.g. "2026-10-26"
+    val createdTimestamp: Long = System.currentTimeMillis(),
+    val templateId: Int = 1,
+    val templateName: String = "ပုံစံ ၁",
+    val paperWidthMm: Int = 80,
+    val cargoId: Long? = null,
+    val truckId: Long? = null,
+    val customerName: String = "",
+    val customerPhone: String = "",
+    val customerAddress: String = "",
+    val carNumber: String = "",
+    val driverName: String = "",
+    val itemDescription: String = "",
+    val quantity: Int = 1,
+    val weightViss: Double = 0.0,
+    val freightFee: Double = 0.0,
+    val laborFee: Double = 0.0,
+    val totalAmount: Double = 0.0,
+    val paymentStatus: String = "PAID",
+    val tableRowsJson: String = "", // JSON list of rows for table view
+    val remarks: String = ""
+)
+
