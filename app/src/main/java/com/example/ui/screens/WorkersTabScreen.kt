@@ -202,6 +202,8 @@ fun WorkersTabScreen(
         }
     }
 
+    var laborToPrint by remember { mutableStateOf<WorkerLaborEntity?>(null) }
+
     // Labor Detail Modal Dialog
     selectedLaborDetails?.let { record ->
         AlertDialog(
@@ -229,10 +231,57 @@ fun WorkersTabScreen(
                 }
             },
             confirmButton = {
-                Button(onClick = { selectedLaborDetails = null }, colors = ButtonDefaults.buttonColors(containerColor = BmkNavy)) {
-                    Text("ပိတ်မည်", color = Color.White, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { laborToPrint = record },
+                        colors = ButtonDefaults.buttonColors(containerColor = BmkOrange),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Print, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Print ထုတ်မည်", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+
+                    Button(
+                        onClick = { selectedLaborDetails = null },
+                        colors = ButtonDefaults.buttonColors(containerColor = BmkNavy),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("ပိတ်မည်", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
+        )
+    }
+
+    // Labor Print Dialog trigger
+    laborToPrint?.let { record ->
+        val pseudoCargo = com.example.data.model.CargoEntity(
+            id = record.id,
+            trackingNumber = "WRK-${record.id}",
+            senderName = record.workerName,
+            senderPhone = if (record.gateBranch == "MANDALAY") "မန္တလေးဂိတ် (M-wages)" else "ကလေးဂိတ် (K-wages)",
+            senderAddress = "BMK Express Gate",
+            receiverName = record.workerName,
+            receiverPhone = record.date,
+            receiverShopAddress = record.notes.ifBlank { "အလုပ်သမား ထုတ်ပေးငွေ ဘောက်ချာ" },
+            cargoName = "အလုပ်သမားခ - ${record.vissHandled} ပိဿာ",
+            itemDescription = "၁ ပိဿာ: ${record.laborRatePerViss} ကျပ်",
+            weightViss = record.vissHandled,
+            weightUnit = "ပိဿာ",
+            quantity = 1,
+            freightFee = 0.0,
+            mdyLoadingLaborFee = record.totalLaborPaid,
+            klyUnloadingLaborFee = 0.0,
+            shuttleLaborFee = record.shuttleLaborAmount,
+            totalAmount = record.totalLaborPaid,
+            paymentStatus = "PAID",
+            remarks = record.notes
+        )
+        com.example.ui.components.CargoPrintDialog(
+            cargo = pseudoCargo,
+            viewModel = viewModel,
+            onDismiss = { laborToPrint = null }
         )
     }
 

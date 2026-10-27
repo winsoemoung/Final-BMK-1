@@ -253,6 +253,10 @@ fun HistoryTabScreen(
         }
     }
 
+    var cargoToPrint by remember { mutableStateOf<CargoEntity?>(null) }
+    var truckToPrint by remember { mutableStateOf<TruckEntity?>(null) }
+    var workerToPrint by remember { mutableStateOf<WorkerLaborEntity?>(null) }
+
     // Customer Detail Dialog
     selectedCustomerName?.let { custName ->
         val custCargos = allCargo.filter { it.senderName == custName }
@@ -266,12 +270,28 @@ fun HistoryTabScreen(
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.heightIn(max = 350.dp)) {
                     items(custCargos) { cargo ->
                         Card(colors = CardDefaults.cardColors(containerColor = SurfaceLight)) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Text("• ဘောက်ချာ: ${cargo.trackingNumber}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BmkNavy)
-                                Text("• ကုန်အမည်: ${cargo.cargoName.ifBlank { cargo.itemDescription }} (${cargo.quantity} ${cargo.weightUnit})", fontSize = 11.sp, color = TextPrimary)
-                                Text("• အလေးချိန်: ${cargo.weightViss} ပိဿာ", fontSize = 11.sp)
-                                Text("• ကလေးမြို့ လက်ခံသူ: ${cargo.receiverName} (${cargo.receiverPhone})", fontSize = 11.sp, color = TextSecondary)
-                                Text("• ကျသင့်ငွေ: ${currencyFormat.format(cargo.totalAmount)} ကျပ်", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BmkOrange)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("• ဘောက်ချာ: ${cargo.trackingNumber}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BmkNavy)
+                                    Text("• ကုန်အမည်: ${cargo.cargoName.ifBlank { cargo.itemDescription }} (${cargo.quantity} ${cargo.weightUnit})", fontSize = 11.sp, color = TextPrimary)
+                                    Text("• အလေးချိန်: ${cargo.weightViss} ပိဿာ", fontSize = 11.sp)
+                                    Text("• ကလေးမြို့ လက်ခံသူ: ${cargo.receiverName} (${cargo.receiverPhone})", fontSize = 11.sp, color = TextSecondary)
+                                    Text("• ကျသင့်ငွေ: ${currencyFormat.format(cargo.totalAmount)} ကျပ်", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BmkOrange)
+                                }
+                                IconButton(
+                                    onClick = { cargoToPrint = cargo },
+                                    modifier = Modifier
+                                        .background(BmkOrange, RoundedCornerShape(8.dp))
+                                        .size(36.dp)
+                                ) {
+                                    Icon(Icons.Default.Print, contentDescription = "Print Voucher", tint = Color.White, modifier = Modifier.size(18.dp))
+                                }
                             }
                         }
                     }
@@ -299,7 +319,7 @@ fun HistoryTabScreen(
                     Divider(color = CardBorderColor)
                     Text("ကားပေါ်ပါ ကုန်ပစ္စည်းများ စာရင်း (${truckCargos.size} မျိုး):", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BmkOrange)
 
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.heightIn(max = 300.dp)) {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.heightIn(max = 260.dp)) {
                         items(truckCargos.size) { idx ->
                             val item = truckCargos[idx]
                             Surface(color = SurfaceLight, shape = RoundedCornerShape(6.dp)) {
@@ -320,7 +340,19 @@ fun HistoryTabScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { selectedTruckDetails = null }) { Text("ပိတ်မည်", fontWeight = FontWeight.Bold, color = TextSecondary) }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { truckToPrint = truck },
+                        colors = ButtonDefaults.buttonColors(containerColor = BmkOrange),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Print, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("ကားစာရင်း Print ထုတ်မည်", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+
+                    TextButton(onClick = { selectedTruckDetails = null }) { Text("ပိတ်မည်", fontWeight = FontWeight.Bold, color = TextSecondary) }
+                }
             }
         )
     }
@@ -328,6 +360,7 @@ fun HistoryTabScreen(
     // Worker Detail Dialog
     selectedWorkerName?.let { worker ->
         val workerRecords = workerLaborRecords.filter { it.workerName == worker }
+        val firstRec = workerRecords.firstOrNull()
         AlertDialog(
             onDismissRequest = { selectedWorkerName = null },
             containerColor = Color.White,
@@ -336,10 +369,26 @@ fun HistoryTabScreen(
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.heightIn(max = 300.dp)) {
                     items(workerRecords) { rec ->
                         Card(colors = CardDefaults.cardColors(containerColor = SurfaceLight)) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Text("• နေ့ရက်: ${rec.date} | ဂိတ်: ${if (rec.gateBranch == "MANDALAY") "မန္တလေး" else "ကလေး"}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BmkNavy)
-                                Text("• မနိန်းကုန် ပိဿာ: ${rec.vissHandled} ပိဿာ", fontSize = 11.sp)
-                                Text("• ရှင်းပြီးငွေ: ${currencyFormat.format(rec.totalLaborPaid)} ကျပ်", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BmkOrange)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("• နေ့ရက်: ${rec.date} | ဂိတ်: ${if (rec.gateBranch == "MANDALAY") "မန္တလေး" else "ကလေး"}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BmkNavy)
+                                    Text("• မနိန်းကုန် ပိဿာ: ${rec.vissHandled} ပိဿာ", fontSize = 11.sp)
+                                    Text("• ရှင်းပြီးငွေ: ${currencyFormat.format(rec.totalLaborPaid)} ကျပ်", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BmkOrange)
+                                }
+                                IconButton(
+                                    onClick = { workerToPrint = rec },
+                                    modifier = Modifier
+                                        .background(BmkOrange, RoundedCornerShape(8.dp))
+                                        .size(36.dp)
+                                ) {
+                                    Icon(Icons.Default.Print, contentDescription = "Print Worker Receipt", tint = Color.White, modifier = Modifier.size(18.dp))
+                                }
                             }
                         }
                     }
@@ -348,6 +397,55 @@ fun HistoryTabScreen(
             confirmButton = {
                 TextButton(onClick = { selectedWorkerName = null }) { Text("ပိတ်မည်", fontWeight = FontWeight.Bold, color = TextSecondary) }
             }
+        )
+    }
+
+    // Print Dialog triggers
+    cargoToPrint?.let { cargo ->
+        com.example.ui.components.CargoPrintDialog(
+            cargo = cargo,
+            viewModel = viewModel,
+            onDismiss = { cargoToPrint = null }
+        )
+    }
+
+    truckToPrint?.let { truck ->
+        val truckCargos = allCargo.filter { it.truckId == truck.id || it.truckNumber == truck.truckNumber }.sortedBy { it.sequenceOrder }
+        com.example.ui.components.CargoPrintDialog(
+            truck = truck,
+            cargosOnTruck = truckCargos,
+            viewModel = viewModel,
+            onDismiss = { truckToPrint = null }
+        )
+    }
+
+    workerToPrint?.let { record ->
+        val pseudoCargo = com.example.data.model.CargoEntity(
+            id = record.id,
+            trackingNumber = "WRK-${record.id}",
+            senderName = record.workerName,
+            senderPhone = if (record.gateBranch == "MANDALAY") "မန္တလေးဂိတ် (M-wages)" else "ကလေးဂိတ် (K-wages)",
+            senderAddress = "BMK Express Gate",
+            receiverName = record.workerName,
+            receiverPhone = record.date,
+            receiverShopAddress = record.notes.ifBlank { "အလုပ်သမား ထုတ်ပေးငွေ ဘောက်ချာ" },
+            cargoName = "အလုပ်သမားခ - ${record.vissHandled} ပိဿာ",
+            itemDescription = "၁ ပိဿာ: ${record.laborRatePerViss} ကျပ်",
+            weightViss = record.vissHandled,
+            weightUnit = "ပိဿာ",
+            quantity = 1,
+            freightFee = 0.0,
+            mdyLoadingLaborFee = record.totalLaborPaid,
+            klyUnloadingLaborFee = 0.0,
+            shuttleLaborFee = record.shuttleLaborAmount,
+            totalAmount = record.totalLaborPaid,
+            paymentStatus = "PAID",
+            remarks = record.notes
+        )
+        com.example.ui.components.CargoPrintDialog(
+            cargo = pseudoCargo,
+            viewModel = viewModel,
+            onDismiss = { workerToPrint = null }
         )
     }
 }

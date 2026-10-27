@@ -193,6 +193,8 @@ fun KalaymyoTabScreen(
         }
     }
 
+    var cargoToPrint by remember { mutableStateOf<CargoEntity?>(null) }
+
     // Cargo Detail Dialog
     selectedCargoDetails?.let { cargo ->
         AlertDialog(
@@ -253,17 +255,29 @@ fun KalaymyoTabScreen(
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${cargo.receiverPhone}"))
-                        context.startActivity(intent)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Icon(Icons.Default.Call, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("လက်ခံသူ ဖုန်းခေါ်မည်", color = Color.White, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { cargoToPrint = cargo },
+                        colors = ButtonDefaults.buttonColors(containerColor = BmkOrange),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Print, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Print ထုတ်မည်", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+
+                    Button(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${cargo.receiverPhone}"))
+                            context.startActivity(intent)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Call, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("ဖုန်းခေါ်မည်", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
                 }
             },
             dismissButton = {
@@ -271,6 +285,15 @@ fun KalaymyoTabScreen(
                     Text("ပိတ်မည်", fontWeight = FontWeight.Bold, color = TextSecondary)
                 }
             }
+        )
+    }
+
+    // Cargo Print Dialog trigger
+    cargoToPrint?.let { cargo ->
+        com.example.ui.components.CargoPrintDialog(
+            cargo = cargo,
+            viewModel = viewModel,
+            onDismiss = { cargoToPrint = null }
         )
     }
 
