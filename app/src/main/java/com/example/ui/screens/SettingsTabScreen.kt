@@ -27,7 +27,6 @@ import com.example.ui.viewmodel.BmkViewModel
 import com.example.util.BackupManager
 import com.example.util.BackupStats
 import com.example.util.GoogleAuthHelper
-import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
@@ -57,7 +56,7 @@ fun SettingsTabScreen(
     var showTestPrintDialog by remember { mutableStateOf(false) }
 
     // Backup & Google Drive Sync State
-    var currentUser by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
+    var currentUser by remember { mutableStateOf(GoogleAuthHelper.getCurrentUser()) }
     var isBackingUp by remember { mutableStateOf(false) }
     var isRestoring by remember { mutableStateOf(false) }
     var isSyncingCloud by remember { mutableStateOf(false) }
@@ -641,7 +640,7 @@ fun SettingsTabScreen(
                                             coroutineScope.launch {
                                                 val result = GoogleAuthHelper.signInWithGoogle(context)
                                                 result.onSuccess { name ->
-                                                    currentUser = FirebaseAuth.getInstance().currentUser
+                                                    currentUser = GoogleAuthHelper.getCurrentUser()
                                                     Toast.makeText(context, "$name ဖြင့် Google Account ချိတ်ဆက်ပြီးပါပြီ", Toast.LENGTH_SHORT).show()
                                                 }.onFailure { err ->
                                                     Toast.makeText(context, "Google Sign-In: ${err.message}", Toast.LENGTH_LONG).show()

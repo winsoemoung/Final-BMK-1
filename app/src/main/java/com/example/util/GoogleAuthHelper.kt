@@ -57,8 +57,18 @@ object GoogleAuthHelper {
     }
 
     fun signOut() {
-        FirebaseAuth.getInstance().signOut()
+        try {
+            FirebaseAuth.getInstance().signOut()
+        } catch (e: Throwable) {
+            // Ignore signout error if Firebase is uninitialized
+        }
     }
 
-    fun getCurrentUser() = FirebaseAuth.getInstance().currentUser
+    fun getCurrentUser(): com.google.firebase.auth.FirebaseUser? {
+        return try {
+            FirebaseAuth.getInstance().currentUser
+        } catch (e: Throwable) {
+            null
+        }
+    }
 }

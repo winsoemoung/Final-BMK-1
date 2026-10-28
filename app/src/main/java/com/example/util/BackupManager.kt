@@ -451,10 +451,14 @@ object BackupManager {
     // Google Cloud / Firebase Firestore Sync
     suspend fun syncBackupToCloud(context: Context): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val user = FirebaseAuth.getInstance().currentUser
+            val user = try { FirebaseAuth.getInstance().currentUser } catch (e: Throwable) { null }
             val uid = user?.uid ?: "anonymous_user"
             val jsonStr = generateBackupJson(context)
-            val db = FirebaseFirestore.getInstance()
+            val db = try {
+                FirebaseFirestore.getInstance()
+            } catch (e: Throwable) {
+                return@withContext Result.failure(Exception("Cloud Sync Service မရရှိနိုင်ပါ: ${e.message}"))
+            }
 
             val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
             val data = hashMapOf(
@@ -467,16 +471,20 @@ object BackupManager {
 
             db.collection("user_backups").document(uid).set(data, SetOptions.merge()).await()
             Result.success("Google Cloud သို့ အောင်မြင်စွာ Backup ပြုလုပ်ပြီးပါပြီ ($now)")
-        } catch (e: Exception) {
-            Result.failure(e)
+        } catch (e: Throwable) {
+            Result.failure(Exception(e.message ?: "Cloud Sync အမှားဖြစ်ပေါ်ပါသည်"))
         }
     }
 
     suspend fun restoreBackupFromCloud(context: Context): Result<BackupStats> = withContext(Dispatchers.IO) {
         try {
-            val user = FirebaseAuth.getInstance().currentUser
+            val user = try { FirebaseAuth.getInstance().currentUser } catch (e: Throwable) { null }
             val uid = user?.uid ?: "anonymous_user"
-            val db = FirebaseFirestore.getInstance()
+            val db = try {
+                FirebaseFirestore.getInstance()
+            } catch (e: Throwable) {
+                return@withContext Result.failure(Exception("Cloud Service မရရှိနိုင်ပါ: ${e.message}"))
+            }
             val doc = db.collection("user_backups").document(uid).get().await()
 
             if (!doc.exists()) {
@@ -486,8 +494,8 @@ object BackupManager {
             val jsonStr = doc.getString("backupJson") ?: return@withContext Result.failure(Exception("Backup ဒေတာ မမှန်ကန်ပါ။"))
             val stats = restoreFromJson(context, jsonStr)
             Result.success(stats)
-        } catch (e: Exception) {
-            Result.failure(e)
+        } catch (e: Throwable) {
+            Result.failure(Exception(e.message ?: "Cloud Restore အမှားဖြစ်ပေါ်ပါသည်"))
         }
     }
 }
