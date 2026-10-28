@@ -39,6 +39,12 @@ class BmkRepository(
 
     suspend fun updateCargoStatus(id: Long, status: String) = cargoDao.updateCargoStatus(id, status)
 
+    suspend fun updateDeliveryAndPaymentStatus(id: Long, deliveryStatus: String, paymentStatus: String, promisedDate: String) {
+        cargoDao.updateDeliveryAndPaymentStatus(id, deliveryStatus, paymentStatus, promisedDate)
+    }
+
+    suspend fun updateCargo(cargo: CargoEntity) = cargoDao.updateCargo(cargo)
+
     suspend fun assignTruckToCargoes(
         cargoIds: List<Long>,
         truckId: Long,

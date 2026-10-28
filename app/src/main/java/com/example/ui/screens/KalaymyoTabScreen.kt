@@ -48,11 +48,22 @@ fun KalaymyoTabScreen(
 
     var showAiDialog by remember { mutableStateOf(false) }
     var selectedSubTab by remember { mutableIntStateOf(0) }
-    val subTabs = listOf("ကလေးမြို့ ဆိုင်အရောက် ကုန်ပစ္စည်းများ", "ပျက်စီးမှု လျော်ကြေးပေးခြင်း")
+    val subTabs = listOf("၁၂ ဘီး ကားလိုက် လိုက်ပို့ခြင်း", "ဆိုင်အရောက် ကုန်ပစ္စည်း စာရင်း", "ပျက်စီးမှု လျော်ကြေး")
 
     var selectedCargoDetails by remember { mutableStateOf<CargoEntity?>(null) }
+    var cargoToPrint by remember { mutableStateOf<CargoEntity?>(null) }
     var selectedClaimDetails by remember { mutableStateOf<CompensationEntity?>(null) }
     var showClaimDialog by remember { mutableStateOf(false) }
+
+    // Delivery Status Update Dialog State
+    var deliveryUpdateCargo by remember { mutableStateOf<CargoEntity?>(null) }
+    var showPromisedDatePicker by remember { mutableStateOf(false) }
+    var promisedDateInput by remember { mutableStateOf("2026-10-30") }
+
+    // Collapsed Truck State: truckId -> collapsed/expanded boolean
+    val collapsedTrucksMap = remember { mutableStateMapOf<Long, Boolean>() }
+    // Truck Sort Mode: truckId -> SortMode ("SEQUENCE", "QUARTER", "STREET", "DENSITY", "AI_ROUTE")
+    val truckSortModesMap = remember { mutableStateMapOf<Long, String>() }
 
     // Claim form
     var trackingNo by remember { mutableStateOf("") }
@@ -116,7 +127,7 @@ fun KalaymyoTabScreen(
                             Text(
                                 text = title,
                                 fontWeight = if (selectedSubTab == index) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 color = if (selectedSubTab == index) BmkNavy else TextSecondary
                             )
                         }
@@ -125,6 +136,273 @@ fun KalaymyoTabScreen(
             }
 
             if (selectedSubTab == 0) {
+                // 1. Truck Delivery Manifest (၁၂ ဘီး ကားလိုက် ကုန်ချ လိုက်ပို့ခြင်း)
+                val trucksGrouped = remember(allCargo) {
+                    allCargo.filter { it.truckNumber.isNotBlank() }.groupBy { it.truckId ?: 0L }
+                }
+
+                if (trucksGrouped.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("ကလေးမြို့သို့ ရောက်ရှိလာသော ၁၂ ဘီး ကားများ မရှိသေးပါ", fontSize = 13.sp, color = TextSecondary)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        items(trucksGrouped.keys.toList()) { truckId ->
+                            val rawTruckCargos = trucksGrouped[truckId] ?: emptyList()
+                            val firstCargo = rawTruckCargos.firstOrNull()
+                            val truckName = firstCargo?.truckNumber?.ifEmpty { "၁၂ ဘီး ယာဉ် #$truckId" } ?: "၁၂ ဘီး ယာဉ် #$truckId"
+                            val isExpanded = collapsedTrucksMap[truckId] ?: true
+                            val currentSortMode = truckSortModesMap[truckId] ?: "SEQUENCE"
+
+                            // Sorted cargos based on selected sort mode
+                            val sortedTruckCargos = remember(rawTruckCargos, currentSortMode) {
+                                when (currentSortMode) {
+                                    "QUARTER" -> rawTruckCargos.sortedBy { it.quarterName.ifBlank { it.receiverShopAddress } }
+                                    "STREET" -> rawTruckCargos.sortedBy { it.streetName.ifBlank { it.receiverShopAddress } }
+                                    "DENSITY" -> rawTruckCargos.sortedBy { it.cargoDensityType } // HEAVY vs BULK
+                                    "AI_ROUTE" -> rawTruckCargos.sortedWith(
+                                        compareBy<CargoEntity> { it.quarterName }
+                                            .thenBy { it.streetName }
+                                            .thenBy { it.cargoDensityType }
+                                    )
+                                    else -> rawTruckCargos.sortedBy { it.sequenceOrder }
+                                }
+                            }
+
+                            // Calculate totals
+                            val totalWeight = rawTruckCargos.sumOf { it.weightViss }
+                            val totalAmt = rawTruckCargos.sumOf { it.totalAmount }
+                            val paidAmt = rawTruckCargos.filter { it.deliveryStatus == "UNLOADED_PAID" || it.paymentStatus == "PAID" }.sumOf { it.totalAmount }
+                            val creditAmt = rawTruckCargos.filter { it.deliveryStatus == "UNLOADED_CREDIT" || it.paymentStatus == "COLLECT" }.sumOf { it.totalAmount }
+
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = CardBackground),
+                                border = BorderStroke(1.5.dp, BmkNavy)
+                            ) {
+                                Column {
+                                    // Truck Header (Collapsible)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(BmkNavy)
+                                            .clickable { collapsedTrucksMap[truckId] = !isExpanded }
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                            Icon(Icons.Default.LocalShipping, contentDescription = null, tint = BmkOrange, modifier = Modifier.size(22.dp))
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column {
+                                                Text(
+                                                    text = truckName,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 14.sp,
+                                                    color = Color.White
+                                                )
+                                                Text(
+                                                    text = "ယာဉ်မောင်း: ${firstCargo?.driverName ?: "-"} | ကုန်စည် (${rawTruckCargos.size}) မျိုး",
+                                                    fontSize = 11.sp,
+                                                    color = Color.White.copy(alpha = 0.85f)
+                                                )
+                                            }
+                                        }
+
+                                        Icon(
+                                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                            contentDescription = "Toggle Expand",
+                                            tint = Color.White
+                                        )
+                                    }
+
+                                    if (isExpanded) {
+                                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            // Smart Sorting Options Bar
+                                            Text(
+                                                text = "ဆိုင်အရောက် လိုက်ပို့ရန် အစဉ်လိုက် စီစဉ်မည်:",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = TextPrimary
+                                            )
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                listOf(
+                                                    "SEQUENCE" to "နံပါတ်စဉ်",
+                                                    "QUARTER" to "ရပ်ကွက်",
+                                                    "STREET" to "လမ်း",
+                                                    "DENSITY" to "ကုန်မာ/ပွ",
+                                                    "AI_ROUTE" to "AI အစဉ်"
+                                                ).forEach { (mode, label) ->
+                                                    val isSelected = currentSortMode == mode
+                                                    FilterChip(
+                                                        selected = isSelected,
+                                                        onClick = { truckSortModesMap[truckId] = mode },
+                                                        label = { Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (isSelected) Color.White else TextPrimary) },
+                                                        colors = FilterChipDefaults.filterChipColors(
+                                                            selectedContainerColor = BmkNavy,
+                                                            selectedLabelColor = Color.White,
+                                                            containerColor = SurfaceLight
+                                                        ),
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                }
+                                            }
+
+                                            Divider(color = CardBorderColor)
+
+                                            // Color-coded Cargo List
+                                            sortedTruckCargos.forEachIndexed { index, cargo ->
+                                                val statusBgColor = when (cargo.deliveryStatus) {
+                                                    "UNLOADED_PAID" -> Color(0xFFDCFCE7) // Emerald Green Light
+                                                    "UNLOADED_CREDIT" -> Color(0xFFFEF3C7) // Amber Light
+                                                    "UNLOADED_PENDING" -> Color(0xFFE0F2FE) // Sky Blue Light
+                                                    "DAMAGED" -> Color(0xFFFEE2E2) // Red Light
+                                                    else -> SurfaceLight // Default Neutral
+                                                }
+
+                                                val statusBorderColor = when (cargo.deliveryStatus) {
+                                                    "UNLOADED_PAID" -> Color(0xFF059669)
+                                                    "UNLOADED_CREDIT" -> Color(0xFFD97706)
+                                                    "UNLOADED_PENDING" -> Color(0xFF0284C7)
+                                                    "DAMAGED" -> Color(0xFFDC2626)
+                                                    else -> CardBorderColor
+                                                }
+
+                                                val statusBadgeText = when (cargo.deliveryStatus) {
+                                                    "UNLOADED_PAID" -> "ကုန်ချ ငွေရှင်းပြီး"
+                                                    "UNLOADED_CREDIT" -> "ကုန်ချ - ငွေပေးမည့်ရက်: ${cargo.promisedPaymentDate.ifEmpty { "ရက်စွဲမရှိ" }}"
+                                                    "UNLOADED_PENDING" -> "ကုန်ချပြီး ငွေမရှင်းရသေး"
+                                                    "DAMAGED" -> "ကုန်ပစ္စည်း ပျက်စီး/လျော်ကြေး"
+                                                    else -> "ကုန်ချဆဲ / မချရသေး"
+                                                }
+
+                                                val statusBadgeTextColor = when (cargo.deliveryStatus) {
+                                                    "UNLOADED_PAID" -> Color(0xFF047857)
+                                                    "UNLOADED_CREDIT" -> Color(0xFFB45309)
+                                                    "UNLOADED_PENDING" -> Color(0xFF0369A1)
+                                                    "DAMAGED" -> Color(0xFFB91C1C)
+                                                    else -> TextSecondary
+                                                }
+
+                                                Card(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable { deliveryUpdateCargo = cargo },
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    colors = CardDefaults.cardColors(containerColor = statusBgColor),
+                                                    border = BorderStroke(1.dp, statusBorderColor)
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(10.dp),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Column(modifier = Modifier.weight(1f)) {
+                                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                Surface(color = BmkNavy, shape = RoundedCornerShape(4.dp)) {
+                                                                    Text("#${index + 1}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                                                                }
+                                                                Spacer(modifier = Modifier.width(6.dp))
+                                                                Text(
+                                                                    text = cargo.receiverName,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    fontSize = 13.sp,
+                                                                    color = BmkNavy
+                                                                )
+                                                                Spacer(modifier = Modifier.width(6.dp))
+                                                                Text("(${cargo.receiverPhone})", fontSize = 11.sp, color = TextSecondary)
+                                                            }
+                                                            Text("ဆိုင်/လိပ်စာ: ${cargo.receiverShopAddress}", fontSize = 11.sp, color = TextPrimary)
+                                                            Text("ကုန်: ${cargo.cargoName.ifBlank { cargo.itemDescription }} (${cargo.weightViss} ပိဿာ)", fontSize = 11.sp, color = TextSecondary)
+
+                                                            Spacer(modifier = Modifier.height(4.dp))
+                                                            Surface(
+                                                                color = statusBorderColor.copy(alpha = 0.2f),
+                                                                shape = RoundedCornerShape(4.dp),
+                                                                border = BorderStroke(1.dp, statusBorderColor)
+                                                            ) {
+                                                                Text(
+                                                                    text = statusBadgeText,
+                                                                    fontSize = 10.sp,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    color = statusBadgeTextColor,
+                                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                )
+                                                            }
+                                                        }
+
+                                                        Column(horizontalAlignment = Alignment.End) {
+                                                            Text(
+                                                                text = "${currencyFormat.format(cargo.totalAmount)} ကျပ်",
+                                                                fontWeight = FontWeight.Bold,
+                                                                fontSize = 13.sp,
+                                                                color = BmkOrange
+                                                            )
+                                                            IconButton(
+                                                                onClick = { deliveryUpdateCargo = cargo },
+                                                                modifier = Modifier.size(32.dp)
+                                                            ) {
+                                                                Icon(Icons.Default.Edit, contentDescription = "Update Status", tint = BmkNavy, modifier = Modifier.size(18.dp))
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            Divider(color = CardBorderColor)
+
+                                            // Bottom Summary Card for Truck
+                                            Surface(
+                                                color = SurfaceLight,
+                                                shape = RoundedCornerShape(8.dp),
+                                                border = BorderStroke(1.dp, CardBorderColor)
+                                            ) {
+                                                Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                        Text("စုစုပေါင်း ပစ္စည်း: ${rawTruckCargos.size} မျိုး", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                        Text("စုစုပေါင်း အလေးချိန်: $totalWeight ပိဿာ", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                    }
+                                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                        Text("စုစုပေါင်း ငွေ: ${currencyFormat.format(totalAmt)} ကျပ်", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BmkNavy)
+                                                        Text("ရရှိပြီး: ${currencyFormat.format(paidAmt)} ကျပ်", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF059669))
+                                                    }
+                                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                        Text("ရရန်ကျန်ငွေ (Credit): ${currencyFormat.format(creditAmt)} ကျပ်", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BmkOrange)
+                                                    }
+                                                }
+                                            }
+
+                                            // Auto Archive / History Transfer Button
+                                            Button(
+                                                onClick = {
+                                                    viewModel.autoArchiveTruckIfCompleted(truckId, rawTruckCargos)
+                                                    Toast.makeText(context, "ကားနံပါတ် $truckName စာရင်း အားလုံးပြီးဆုံး၍ History သို့ ရွှေ့ပြီးပါပြီ", Toast.LENGTH_SHORT).show()
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = BmkOrange),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Icon(Icons.Default.Archive, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("ကုန်ချ ရှင်းပြီးပါက History သို့ အပြီးသိမ်းမည်", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (selectedSubTab == 1) {
                 // Kalaymyo Receivers & Unloading
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -193,7 +471,132 @@ fun KalaymyoTabScreen(
         }
     }
 
-    var cargoToPrint by remember { mutableStateOf<CargoEntity?>(null) }
+    // Delivery Status Update Dialog
+    deliveryUpdateCargo?.let { cargo ->
+        AlertDialog(
+            onDismissRequest = { deliveryUpdateCargo = null },
+            containerColor = Color.White,
+            title = {
+                Text(
+                    text = "${cargo.receiverName} (${cargo.receiverShopAddress})",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = BmkNavy
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("ကုန်အမည်: ${cargo.cargoName.ifBlank { cargo.itemDescription }} (${cargo.weightViss} ပိဿာ)", fontSize = 12.sp, color = TextPrimary)
+                    Text("ကျသင့်ငွေ: ${currencyFormat.format(cargo.totalAmount)} ကျပ်", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BmkOrange)
+
+                    Divider(color = CardBorderColor)
+                    Text("ကုန်ချ အခြေအနေ နှင့် ငွေပေးခြေမှု သတ်မှတ်ရန်:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+
+                    // Option 1: Paid
+                    Button(
+                        onClick = {
+                            viewModel.updateCargoDeliveryAndPayment(
+                                cargoId = cargo.id,
+                                deliveryStatus = "UNLOADED_PAID",
+                                paymentStatus = "PAID",
+                                promisedDate = ""
+                            )
+                            deliveryUpdateCargo = null
+                            Toast.makeText(context, "ကုန်ချ၍ ငွေရှင်းပြီးကြောင်း မှတ်တမ်းတင်ပြီးပါပြီ", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("ကုန်ချ၍ ငွေပေးချေပြီး (Paid)", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
+                    }
+
+                    // Option 2: Promised Payment Date
+                    Button(
+                        onClick = {
+                            showPromisedDatePicker = true
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BmkOrange),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Event, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("နောက်မှ ပေးမည် / ငွေပေးမည့်ရက် သတ်မှတ်မည်", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
+                    }
+
+                    if (showPromisedDatePicker) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = SurfaceLight),
+                            border = BorderStroke(1.dp, CardBorderColor)
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("ငွေလာယူရမည့် ရက်စွဲ (YYYY-MM-DD):", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                OutlinedTextField(
+                                    value = promisedDateInput,
+                                    onValueChange = { promisedDateInput = it },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Button(
+                                    onClick = {
+                                        viewModel.updateCargoDeliveryAndPayment(
+                                            cargoId = cargo.id,
+                                            deliveryStatus = "UNLOADED_CREDIT",
+                                            paymentStatus = "COLLECT",
+                                            promisedDate = promisedDateInput
+                                        )
+                                        showPromisedDatePicker = false
+                                        deliveryUpdateCargo = null
+                                        Toast.makeText(context, "ငွေပေးမည့်ရက် $promisedDateInput အား မှတ်တမ်းတင်ပြီးပါပြီ (Notification Reminder တက်ပါမည်)", Toast.LENGTH_LONG).show()
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = BmkNavy),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("ရက်စွဲ အတည်ပြုမည်", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                }
+                            }
+                        }
+                    }
+
+                    // Option 3: Damaged
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.updateCargoDeliveryAndPayment(
+                                cargoId = cargo.id,
+                                deliveryStatus = "DAMAGED",
+                                paymentStatus = cargo.paymentStatus,
+                                promisedDate = ""
+                            )
+                            deliveryUpdateCargo = null
+                            Toast.makeText(context, "ကုန်ပစ္စည်း ပျက်စီး/လျော်ကြေး အဖြစ် မှတ်တမ်းတင်ပြီးပါပြီ", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFDC2626), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("ကုန်ပစ္စည်း ပျက်စီး / လျော်ကြေး", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFDC2626))
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { cargoToPrint = cargo },
+                    colors = ButtonDefaults.buttonColors(containerColor = BmkNavy)
+                ) {
+                    Icon(Icons.Default.Print, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Print ထုတ်မည်", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deliveryUpdateCargo = null; showPromisedDatePicker = false }) {
+                    Text("ပိတ်မည်", fontWeight = FontWeight.Bold, color = TextSecondary)
+                }
+            }
+        )
+    }
 
     // Cargo Detail Dialog
     selectedCargoDetails?.let { cargo ->

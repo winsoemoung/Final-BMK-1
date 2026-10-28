@@ -293,6 +293,45 @@ class BmkViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Update Door-to-Door Delivery Status & Payment Promised Date at Kalaymyo
+    fun updateCargoDeliveryAndPayment(
+        cargoId: Long,
+        deliveryStatus: String,
+        paymentStatus: String,
+        promisedDate: String
+    ) {
+        viewModelScope.launch {
+            repository.updateDeliveryAndPaymentStatus(
+                id = cargoId,
+                deliveryStatus = deliveryStatus,
+                paymentStatus = paymentStatus,
+                promisedDate = promisedDate
+            )
+            _selectedCargo.value?.let { current ->
+                if (current.id == cargoId) {
+                    _selectedCargo.value = current.copy(
+                        deliveryStatus = deliveryStatus,
+                        paymentStatus = paymentStatus,
+                        promisedPaymentDate = promisedDate
+                    )
+                }
+            }
+        }
+    }
+
+    // Auto-archive truck to COMPLETED if all cargos are delivered & settled
+    fun autoArchiveTruckIfCompleted(truckId: Long, allTruckCargos: List<CargoEntity>) {
+        if (allTruckCargos.isEmpty()) return
+        val allDelivered = allTruckCargos.all {
+            it.deliveryStatus == "UNLOADED_PAID" || it.deliveryStatus == "UNLOADED_CREDIT" || it.deliveryStatus == "DAMAGED"
+        }
+        if (allDelivered) {
+            viewModelScope.launch {
+                repository.updateTruckStatus(truckId, "COMPLETED")
+            }
+        }
+    }
+
     // Car Tab Action: Register 12-Wheeler Truck
     fun registerTruck(
         truckNumber: String,

@@ -65,7 +65,13 @@ data class CargoEntity(
     val driverName: String = "",
     val driverPhone: String = "",
     val sequenceOrder: Int = 0, // Position on the truck (1..N)
-    
+
+    // 10. Kalaymyo Door-to-Door Delivery & Payment Tracking
+    val deliveryStatus: String = "PENDING", // "UNLOADED_PAID" (ကုန်ချ ငွေရှင်းပြီး), "UNLOADED_CREDIT" (ကုန်ချ ငွေပေးမည့်ရက်), "UNLOADED_PENDING" (ကုန်ချပြီး/ငွေမရှင်းရသေး), "DAMAGED" (ကုန်ပစ္စည်း ပျက်စီး/လျော်ကြေး), "PENDING" (ကုန်ချဆဲ/မချရသေး)
+    val promisedPaymentDate: String = "", // "YYYY-MM-DD" (e.g. "2026-10-30")
+    val quarterName: String = "", // ရပ်ကွက် (e.g. "တောင်ဖီလာ", "တဟာန်", "ညောင်ပင်သာ")
+    val streetName: String = "", // လမ်း (e.g. "၈၄ လမ်း", "လမ်း ၃၀")
+
     val createdTimestamp: Long = System.currentTimeMillis(),
     val remarks: String = ""
 )

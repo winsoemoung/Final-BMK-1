@@ -38,6 +38,12 @@ interface CargoDao {
     @Query("UPDATE cargo_shipments SET status = :status WHERE id = :id")
     suspend fun updateCargoStatus(id: Long, status: String)
 
+    @Query("UPDATE cargo_shipments SET deliveryStatus = :deliveryStatus, paymentStatus = :paymentStatus, promisedPaymentDate = :promisedDate WHERE id = :id")
+    suspend fun updateDeliveryAndPaymentStatus(id: Long, deliveryStatus: String, paymentStatus: String, promisedDate: String)
+
+    @Update
+    suspend fun updateCargo(cargo: CargoEntity)
+
     @Query("UPDATE cargo_shipments SET truckId = :truckId, truckNumber = :truckNumber, driverName = :driverName, driverPhone = :driverPhone, sequenceOrder = :sequenceOrder, status = 'LOADING_12WHEELER' WHERE id = :id")
     suspend fun assignTruckToCargo(id: Long, truckId: Long, truckNumber: String, driverName: String, driverPhone: String, sequenceOrder: Int)
 

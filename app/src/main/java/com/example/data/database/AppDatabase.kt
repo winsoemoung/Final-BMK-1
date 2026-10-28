@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
         PrintTemplateEntity::class,
         PrintedVoucherEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -51,7 +51,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "bmk_express_database_v5"
+                    "bmk_express_database_v6"
                 )
                     .addCallback(DatabaseCallback())
                     .fallbackToDestructiveMigration()
@@ -86,7 +86,7 @@ abstract class AppDatabase : RoomDatabase() {
                     driverPhone = "0945001122",
                     mandalayToKalayFreightPrice = 1500000.0,
                     dispatchDate = "2026-10-25",
-                    status = "IN_TRANSIT",
+                    status = "KALAY_ARRIVED",
                     totalVissLoaded = 1250.0,
                     totalCargosCount = 18,
                     notes = "Mandalay -> Kalaymyo Direct Line"
@@ -136,12 +136,15 @@ abstract class AppDatabase : RoomDatabase() {
                     klyUnloadingLaborFee = 1250.0,
                     totalAmount = 70500.0,
                     paymentStatus = "PAID",
-                    status = "IN_TRANSIT",
+                    status = "KALAY_ARRIVED",
+                    deliveryStatus = "UNLOADED_PAID",
+                    quarterName = "တဟာန်",
+                    streetName = "နာရီစင်လမ်း",
                     truckId = truckId1,
                     truckNumber = "MDY 7D-1212 (12-Wheeler)",
                     driverName = "ဦးကိုကို (09-45001122)",
                     driverPhone = "0945001122",
-                    remarks = "ကလေးမြို့ ဆိုင်အရောက် ပို့ရန်"
+                    remarks = "ကလေးမြို့ ဆိုင်အရောက် ပို့ပြီး"
                 )
             )
 
@@ -164,7 +167,7 @@ abstract class AppDatabase : RoomDatabase() {
                     shuttleLaborFee = 0.0,
                     receiverName = "ဒေါ်စန်းစန်း (Daw San San)",
                     receiverPhone = "09780099887",
-                    receiverShopAddress = "စန်းစန်း ကုန်စုံဆိုင်၊ ညောင်ပင်သာ၊ ကလေးမြို့",
+                    receiverShopAddress = "စန်းစန်း ကုန်စုံဆိုင်၊ တောင်ဖီလာရပ်ကွက်၊ ကလေးမြို့",
                     freightRatePerViss = 1200.0,
                     freightFee = 96000.0,
                     mdyLoadingRatePerViss = 25.0,
@@ -173,12 +176,16 @@ abstract class AppDatabase : RoomDatabase() {
                     klyUnloadingLaborFee = 2000.0,
                     totalAmount = 100000.0,
                     paymentStatus = "COLLECT",
-                    status = "MANDALAY_RECEIVED",
-                    truckId = truckId2,
-                    truckNumber = "MDY 9B-8833 (12-Wheeler)",
-                    driverName = "ဦးကျော်စန်း (09-79011223)",
-                    driverPhone = "0979011223",
-                    remarks = "မန္တလေးဂိတ်တွင် ၁၂ ဘီး ကားပေါ် တင်နေဆဲ"
+                    status = "KALAY_ARRIVED",
+                    deliveryStatus = "UNLOADED_CREDIT",
+                    promisedPaymentDate = "2026-10-30",
+                    quarterName = "တောင်ဖီလာ",
+                    streetName = "တောင်ဖီလာလမ်းမ",
+                    truckId = truckId1,
+                    truckNumber = "MDY 7D-1212 (12-Wheeler)",
+                    driverName = "ဦးကိုကို (09-45001122)",
+                    driverPhone = "0945001122",
+                    remarks = "ကုန်ချပြီး - ငွေပေးမည့်ရက် (2026-10-30)"
                 )
             )
 
