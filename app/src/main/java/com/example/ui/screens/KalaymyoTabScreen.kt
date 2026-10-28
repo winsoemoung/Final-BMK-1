@@ -716,8 +716,41 @@ fun KalaymyoTabScreen(
                 }
             },
             confirmButton = {
-                Button(onClick = { selectedClaimDetails = null }, colors = ButtonDefaults.buttonColors(containerColor = BmkNavy)) {
-                    Text("ပိတ်မည်", color = Color.White, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            val compensationCargo = CargoEntity(
+                                id = claim.id,
+                                trackingNumber = claim.trackingNumber.ifBlank { "DMG-${claim.id}" },
+                                cargoName = "ပျက်စီးမှု လျော်ကြေး (" + (if (claim.status == "PAID") "ပေးလျော်ပြီး" else "စိစစ်ဆဲ") + ")",
+                                itemDescription = claim.damageDescription,
+                                senderName = "BMK EXPRESS Car Gate",
+                                senderPhone = "09-987769641",
+                                receiverName = claim.customerName,
+                                receiverPhone = claim.customerPhone,
+                                receiverShopAddress = "လျော်ကြေး ရက်စွဲ: ${claim.date}",
+                                totalAmount = if (claim.paidAmount > 0) claim.paidAmount else claim.claimAmount,
+                                freightFee = claim.claimAmount,
+                                paymentStatus = if (claim.status == "PAID") "PAID" else "COLLECT",
+                                remarks = "တောင်းဆိုငွေ: ${claim.claimAmount} ကျပ် | ပေးလျော်ငွေ: ${claim.paidAmount} ကျပ် | ${claim.notes}"
+                            )
+                            cargoToPrint = compensationCargo
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BmkOrange),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Print, contentDescription = "Print Claim", tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Print ထုတ်မည်", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+
+                    Button(
+                        onClick = { selectedClaimDetails = null },
+                        colors = ButtonDefaults.buttonColors(containerColor = BmkNavy),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("ပိတ်မည်", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         )
